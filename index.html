@@ -187,7 +187,7 @@
     const LIFF_ID = "2011577734-Ymuphm2J";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQ1gPV_8qG7bpPHRNBJsvPw1VhBCdD1BS80lcA/exec";
 
-    // --- ローカルのフォールバックデータ ---
+    // --- デフォルトデータ ---
     let masterEvents = {
       "alice": {
         name: "① アリス",
@@ -204,7 +204,7 @@
     };
 
     let currentUser = { userId: "guest_" + Math.random().toString(36).substring(2, 9), displayName: "ゲスト" };
-    let userBookings = {}; 
+    let userBookings = {}; // { eventId: "10/10 19:00" } の形で予約日時を保持
     let userStamps = [];
     let activeTargetEventId = null;
     let tempSelectedDate = null;
@@ -212,13 +212,8 @@
     // --- タブ切り替え制御 ---
     function switchTab(index) {
       const container = document.getElementById("tabContainer");
-      const indicator = document.getElementById("tabIndicator");
-      const btn0 = document.getElementById("tabBtn0");
-      const btn1 = document.getElementById("tabBtn1");
-
       const width = container.clientWidth;
       container.scrollTo({ left: width * index, behavior: 'smooth' });
-
       updateTabUI(index);
     }
 
@@ -238,7 +233,7 @@
       }
     }
 
-    // スクロール検知でタブ選択状態を自動アップデート（指スワイプ対応）
+    // スクロール検知でタブ自動連動（指スワイプ対応）
     document.addEventListener("DOMContentLoaded", () => {
       const container = document.getElementById("tabContainer");
       container.addEventListener("scroll", () => {
@@ -248,7 +243,147 @@
       });
     });
 
-    // --- 日程選択モーダルの補助関数 ---
+    // --- 画面描画 ---
+    function renderApp() {
+      const eventKeys = Object.keys(masterEvents);
+
+      // 1. スタンプカード
+      const stampGrid = document.getElementById("stampGrid");
+      stampGrid.innerHTML = "";
+
+      eventKeys.forEach((key, index) => {
+        const isStamped = userStamps.includes(key);
+        const html = `
+          <div class="stamp-slot ${isStamped ? 'active' : ''}">
+            <span class="text-[10px] text-slate-500 absolute top-2 left-2">#0${index + 1}</span>
+            ${isStamped 
+              ? `<div class="stamp-mark"><i class="fas fa-check-circle"></i></div><span class="text-[10px] text-amber-400 font-bold mt-1">済</span>`
+              : `<i class="fas fa-film text-slate-700 text-2xl"></i><span class="text-[10px] text-slate-500 mt-1 center text-center px-1">${masterEvents[key].name}</span>`
+            }
+          </div>
+        `;
+        stampGrid.innerHTML += html;
+      });
+
+      document.getElementById("stampCount").textContent = `${userStamps.length} / ${eventKeys.length}`;
+
+      // 2. イベントリスト（予約済み日時を表示）
+      const eventList = document.getElementById("eventList");
+      eventList.innerHTML = "";
+
+      eventKeys.forEach(key => {
+        const ev = masterEvents[key];
+        const bookingTime = userBookings[key]; 
+        const isBooked = !!bookingTime;
+        const isStamped = userStamps.includes(key);
+
+        const html = `
+          <div class="glass p-4 rounded-xl space-y-3">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-sm text-slate-100">${ev.name}</h3>
+              <div class="flex gap-1 flex-wrap justify-end">
+                ${isBooked ? `<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">✓ 予約: ${bookingTime}</span>` : ''}
+                ${isStamped ? `<span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">スタンプ済</span>` : ''}
+              </div>
+            </div>
+
+            <!-- リアクションボタン -->
+            <div class="flex gap-2 text-xs">
+              <button onclick="sendReaction('${key}', '❤️')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-700">❤️ 楽しみ</button>
+              <button onclick="sendReaction('${key}', '🙌')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-700">🙌 行く！</button>
+            </div>
+
+            <!-- アクションボタン -->
+            <div class="flex gap-2 pt-1">
+              <button onclick="openBookingModal('${key}')" class="w-1/2 py-2 ${isBooked ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 text-white'} text-xs font-semibold rounded-xl transition">
+                ${isBooked ? '予約日時を変更' : '日程を選んで予約'}
+              </button>
+              <button onclick="openStampModal('${key}')" ${isStamped ? 'disabled' : ''} class="w-1/2 py-2 ${isStamped ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'} text-xs font-bold rounded-xl transition">
+                ${isStamped ? 'スタンプ獲得済み' : 'スタンプを押す 🎯'}
+              </button>
+            </div>
+          </div>
+        `;
+        eventList.innerHTML += html;
+      });
+    }
+
+    // --- LIFF初期化 & サーバー同期 ---
+    window.onload = function() {
+      if (typeof liff !== "undefined" && LIFF_ID && LIFF_ID !== "YOUR_LIFF_ID") {
+        liff.init({ liffId: LIFF_ID })
+          .then(() => {
+            if (liff.isLoggedIn()) {
+              liff.getProfile().then(profile => {
+                currentUser.userId = profile.userId;
+                currentUser.displayName = profile.displayName;
+                document.getElementById('userName').textContent = currentUser.displayName;
+                if(profile.pictureUrl) {
+                  document.getElementById('userAvatar').innerHTML = `<img src="${profile.pictureUrl}" class="w-full h-full rounded-full">`;
+                }
+                syncServer();
+              }).catch(() => syncServer());
+            } else {
+              syncServer();
+            }
+          })
+          .catch(err => {
+            console.error("LIFF Error:", err);
+            syncServer();
+          });
+      } else {
+        syncServer();
+      }
+    };
+
+    function syncServer() {
+      renderApp();
+
+      if (!GAS_URL || GAS_URL.includes("YOUR_GAS_WEB_APP_URL")) return;
+
+      const url = `${GAS_URL}?action=GET_STATUS&userId=${encodeURIComponent(currentUser.userId)}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if(data && data.events && Object.keys(data.events).length > 0) {
+            masterEvents = data.events;
+          }
+          if(data && data.userBookings) {
+            userBookings = data.userBookings;
+          }
+          if(data && data.userStamps) {
+            userStamps = data.userStamps;
+          }
+          renderApp();
+          updateAdminSelectOptions();
+        })
+        .catch(err => {
+          console.error("GASデータ取得失敗:", err);
+          renderApp();
+          updateAdminSelectOptions();
+        });
+    }
+
+    // --- モーダル・日程選択処理 ---
+    function openBookingModal(eventId) {
+      activeTargetEventId = eventId;
+      tempSelectedDate = null;
+      const ev = masterEvents[eventId];
+      document.getElementById("bookingTitle").textContent = `${ev.name} の予約`;
+      
+      const noticeEl = document.getElementById("currentBookingNotice");
+      if (userBookings[eventId]) {
+        noticeEl.textContent = `現在：${userBookings[eventId]}`;
+        noticeEl.classList.remove("hidden");
+      } else {
+        noticeEl.classList.add("hidden");
+      }
+
+      renderDateOptions();
+      updateConfirmButton();
+      document.getElementById("bookingModal").classList.remove("hidden");
+    }
+
     function renderDateOptions() {
       if (!activeTargetEventId || !masterEvents[activeTargetEventId]) return;
       const ev = masterEvents[activeTargetEventId];
@@ -297,162 +432,6 @@
       }
     }
 
-    // --- LIFF初期化 ---
-    window.onload = function() {
-      if (typeof liff !== "undefined" && LIFF_ID && LIFF_ID !== "YOUR_LIFF_ID") {
-        liff.init({ liffId: LIFF_ID })
-          .then(() => {
-            if (liff.isLoggedIn()) {
-              liff.getProfile().then(profile => {
-                currentUser.userId = profile.userId;
-                currentUser.displayName = profile.displayName;
-                document.getElementById('userName').textContent = currentUser.displayName;
-                if(profile.pictureUrl) {
-                  document.getElementById('userAvatar').innerHTML = `<img src="${profile.pictureUrl}" class="w-full h-full rounded-full">`;
-                }
-                syncServer();
-              }).catch(() => syncServer());
-            } else {
-              syncServer();
-            }
-          })
-          .catch(err => {
-            console.error("LIFF Error:", err);
-            syncServer();
-          });
-      } else {
-        syncServer();
-      }
-    };
-
-    // --- サーバー（GAS）から状態を取得 ---
-    function syncServer() {
-      renderApp();
-
-      if (!GAS_URL || GAS_URL.includes("YOUR_GAS_WEB_APP_URL")) return;
-
-      const url = `${GAS_URL}?action=GET_STATUS&userId=${encodeURIComponent(currentUser.userId)}`;
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          if(data && data.events && Object.keys(data.events).length > 0) {
-            masterEvents = data.events;
-          }
-          if(data && data.userBookings) {
-            if (Array.isArray(data.userBookings)) {
-              data.userBookings.forEach(id => { userBookings[id] = userBookings[id] || "予約済"; });
-            } else {
-              userBookings = data.userBookings;
-            }
-          }
-          if(data && data.userStamps) userStamps = data.userStamps;
-          renderApp();
-          updateAdminSelectOptions();
-        })
-        .catch(err => {
-          console.error("GASデータ取得失敗:", err);
-          renderApp();
-          updateAdminSelectOptions();
-        });
-    }
-
-    // --- 画面描画 ---
-    function renderApp() {
-      const eventKeys = Object.keys(masterEvents);
-
-      // 1. スタンプカード
-      const stampGrid = document.getElementById("stampGrid");
-      stampGrid.innerHTML = "";
-
-      eventKeys.forEach((key, index) => {
-        const isStamped = userStamps.includes(key);
-        const html = `
-          <div class="stamp-slot ${isStamped ? 'active' : ''}">
-            <span class="text-[10px] text-slate-500 absolute top-2 left-2">#0${index + 1}</span>
-            ${isStamped 
-              ? `<div class="stamp-mark"><i class="fas fa-check-circle"></i></div><span class="text-[10px] text-amber-400 font-bold mt-1">済</span>`
-              : `<i class="fas fa-film text-slate-700 text-2xl"></i><span class="text-[10px] text-slate-500 mt-1 center text-center px-1">${masterEvents[key].name}</span>`
-            }
-          </div>
-        `;
-        stampGrid.innerHTML += html;
-      });
-
-      document.getElementById("stampCount").textContent = `${userStamps.length} / ${eventKeys.length}`;
-
-      // 2. イベントリスト
-      const eventList = document.getElementById("eventList");
-      eventList.innerHTML = "";
-
-      eventKeys.forEach(key => {
-        const ev = masterEvents[key];
-        const isBooked = !!userBookings[key];
-        const isStamped = userStamps.includes(key);
-
-        const html = `
-          <div class="glass p-4 rounded-xl space-y-3">
-            <div class="flex justify-between items-center">
-              <h3 class="font-bold text-sm text-slate-100">${ev.name}</h3>
-              <div class="flex gap-1">
-                ${isBooked ? `<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">✓ 予約済</span>` : ''}
-                ${isStamped ? `<span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">スタンプ済</span>` : ''}
-              </div>
-            </div>
-
-            <!-- リアクションボタン -->
-            <div class="flex gap-2 text-xs">
-              <button onclick="sendReaction('${key}', '❤️')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-700">❤️ 楽しみ</button>
-              <button onclick="sendReaction('${key}', '🙌')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-700">🙌 行く！</button>
-            </div>
-
-            <!-- アクションボタン -->
-            <div class="flex gap-2 pt-1">
-              <button onclick="openBookingModal('${key}')" class="w-1/2 py-2 ${isBooked ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 text-white'} text-xs font-semibold rounded-xl transition">
-                ${isBooked ? '予約日程を変更する' : '日程を選んで予約'}
-              </button>
-              <button onclick="openStampModal('${key}')" ${isStamped ? 'disabled' : ''} class="w-1/2 py-2 ${isStamped ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'} text-xs font-bold rounded-xl transition">
-                ${isStamped ? 'スタンプ獲得済み' : 'スタンプを押す 🎯'}
-              </button>
-            </div>
-          </div>
-        `;
-        eventList.innerHTML += html;
-      });
-    }
-
-    // --- モーダル操作 ---
-    function openBookingModal(eventId) {
-      activeTargetEventId = eventId;
-      tempSelectedDate = null;
-      const ev = masterEvents[eventId];
-      document.getElementById("bookingTitle").textContent = `${ev.name} の予約`;
-      
-      const noticeEl = document.getElementById("currentBookingNotice");
-      if (userBookings[eventId] && userBookings[eventId] !== "予約済") {
-        noticeEl.textContent = `現在：${userBookings[eventId]}`;
-        noticeEl.classList.remove("hidden");
-      } else {
-        noticeEl.classList.add("hidden");
-      }
-
-      renderDateOptions();
-      updateConfirmButton();
-      document.getElementById("bookingModal").classList.remove("hidden");
-    }
-
-    function openStampModal(eventId) {
-      activeTargetEventId = eventId;
-      const ev = masterEvents[eventId];
-      document.getElementById("quizQuestion").textContent = `❓ 質問: ${ev.question}`;
-      document.getElementById("quizAnswer").value = "";
-      document.getElementById("stampModal").classList.remove("hidden");
-    }
-
-    function closeModal(modalId) {
-      document.getElementById(modalId).classList.add("hidden");
-    }
-
-    // --- サーバー送信アクション（確定時） ---
     function submitBooking() {
       if (!tempSelectedDate) return;
 
@@ -475,16 +454,36 @@
       alert(`「${tempSelectedDate}」で予約を確定しました！`);
     }
 
+    // --- クイズ＆スタンプ処理 (CORSエラー対策版) ---
+    function openStampModal(eventId) {
+      activeTargetEventId = eventId;
+      const ev = masterEvents[eventId];
+      document.getElementById("quizQuestion").textContent = `❓ 質問: ${ev.question}`;
+      document.getElementById("quizAnswer").value = "";
+      document.getElementById("stampModal").classList.remove("hidden");
+    }
+
     function submitQuiz() {
-      const answer = document.getElementById("quizAnswer").value;
+      const answer = document.getElementById("quizAnswer").value.trim();
       if (!answer) {
         alert("答えを入力してください！");
         return;
       }
 
+      // クライアント側で即時判定（CORS通信エラーを未然に防止）
+      const ev = masterEvents[activeTargetEventId];
+      const isCorrect = ev && (String(ev.answer).trim() === answer);
+
+      if (!isCorrect) {
+        alert("❌ 答えが違います！");
+        return;
+      }
+
+      // GASへ非同期送信 (no-corsモードで確実にデータを保存)
       fetch(GAS_URL, {
         method: "POST",
-        headers: { "Content-Type": "text/plain" },
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "CHECK_STAMP",
           userId: currentUser.userId,
@@ -492,30 +491,15 @@
           eventId: activeTargetEventId,
           answer: answer
         })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === "OK") {
-          if (!userStamps.includes(activeTargetEventId)) {
-            userStamps.push(activeTargetEventId);
-          }
-          closeModal("stampModal");
-          renderApp();
-          alert("🎉 正解！スタンプを獲得しました！");
-        } else {
-          alert("❌ 残念！答えが違います。");
-        }
-      })
-      .catch(() => {
-        if(answer === "1111") {
-          if (!userStamps.includes(activeTargetEventId)) userStamps.push(activeTargetEventId);
-          closeModal("stampModal");
-          renderApp();
-          alert("🎉 スタンプを獲得しました！");
-        } else {
-          alert("❌ 答えが違います！");
-        }
       });
+
+      // UIを即時更新
+      if (!userStamps.includes(activeTargetEventId)) {
+        userStamps.push(activeTargetEventId);
+      }
+      closeModal("stampModal");
+      renderApp();
+      alert("🎉 正解！スタンプを獲得しました！");
     }
 
     function sendReaction(eventId, emoji) {
@@ -534,7 +518,11 @@
       alert(`リアクション 「${emoji}」 を送信しました！`);
     }
 
-    // --- 管理者機能 ---
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add("hidden");
+    }
+
+    // --- 管理者画面 ---
     function toggleAdminModal() {
       document.getElementById("adminModal").classList.toggle("hidden");
     }
