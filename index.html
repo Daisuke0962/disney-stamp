@@ -36,7 +36,7 @@
 
     .header {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       padding: 16px;
       background-color: var(--card-bg);
       border-radius: 12px;
@@ -58,6 +58,43 @@
       display: inline-block;
     }
 
+    /* タブ切り替えUI */
+    .tab-nav {
+      display: flex;
+      background: #e0e6ed;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 12px 8px;
+      border: none;
+      background: none;
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: #666;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--card-bg);
+      color: var(--primary-color);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* ローディング表示 */
     .loading-container {
       text-align: center;
       padding: 40px 20px;
@@ -99,6 +136,7 @@
       word-break: break-all;
     }
 
+    /* カード・パーツ各種 */
     .card {
       background: var(--card-bg);
       border-radius: 12px;
@@ -223,7 +261,7 @@
       <div id="user-display" class="user-info">ユーザー情報を確認中...</div>
     </div>
 
-    <!-- ローディング / コンテンツ表示領域 -->
+    <!-- メインコンテンツ表示エリア -->
     <div id="content">
       <div class="loading-container">
         <div id="status-text" class="status-text">アプリを初期化中...</div>
@@ -275,7 +313,6 @@
       const urlParams = new URLSearchParams(window.location.search);
       isAdminMode = urlParams.get('mode') === 'admin';
 
-      // 1. LIFF初期化
       updateProgress(20, "LINEアカウント認証中...");
       try {
         if (LIFF_ID && !LIFF_ID.includes("YOUR_")) {
@@ -289,30 +326,26 @@
             return;
           }
         } else {
-          console.warn("LIFF ID未設定のためデバッグモードで動かします");
           currentUser.userId = "test_user_01";
           currentUser.displayName = "開発用ユーザー";
         }
       } catch (err) {
-        console.warn("LIFF初期化スキップ:", err);
         currentUser.userId = "test_user_01";
         currentUser.displayName = "開発用ユーザー";
       }
 
       document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様`;
 
-      // 2. GASからのデータ取得
       updateProgress(30, "サーバーへ接続中...");
       await loadStatus();
     };
 
     async function loadStatus() {
       if (!GAS_URL || GAS_URL.includes("YOUR_")) {
-        showError("GASのURL（GAS_URL）が未設定です。", "index.html 内の GAS_URL を正しいWebアプリURLに書き換えてください。");
+        showError("GASのURL（GAS_URL）が未設定です。");
         return;
       }
 
-      // 経過時間に応じたプログレスバーとメッセージのシミュレーション
       let currentPercent = 30;
       const progressTimer = setInterval(() => {
         if (currentPercent < 85) {
@@ -325,9 +358,8 @@
       }, 500);
 
       try {
-        // ★ タイムアウトを 60秒 (60000ms) に設定
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
 
         const response = await fetch(`${GAS_URL}?action=GET_STATUS&userId=${encodeURIComponent(currentUser.userId)}`, {
           signal: controller.signal
@@ -336,9 +368,7 @@
         clearTimeout(timeoutId);
         clearInterval(progressTimer);
 
-        if (!response.ok) {
-          throw new Error(`HTTPエラー Status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTPエラー Status: ${response.status}`);
 
         const data = await response.json();
 
@@ -356,45 +386,102 @@
       } catch (err) {
         clearInterval(progressTimer);
         console.error("データ取得エラー:", err);
-        if (err.name === 'AbortError') {
-          showError("通信がタイムアウト（60秒）しました。", "サーバーからの応答がありませんでした。少し時間をおいて再度お試しいただくか、GASのアクセス設定をご確認ください。");
-        } else {
-          showError("データの読み込みに失敗しました。", err.message);
-        }
+        showError("データの読み込みに失敗しました。", err.message);
       }
     }
 
+    // メインUI（タブ切り替え構造）の描画
     function renderApp() {
       const container = document.getElementById("content");
-      container.innerHTML = "";
-
+      
       const eventKeys = Object.keys(masterEvents);
       if (eventKeys.length === 0) {
         container.innerHTML = "<p style='text-align:center;'>現在登録されている上映イベントはありません。</p>";
         return;
       }
 
+      // タブの骨組みを作成
+      container.innerHTML = `
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab('stamps')">🎟️ スタンプカード</button>
+          <button class="tab-btn" onclick="switchTab('booking')">📅 上映予約・日程</button>
+        </div>
+
+        <!-- 左タブ: スタンプ ＆ リアクション ＆ クイズ -->
+        <div id="tab-stamps" class="tab-content active"></div>
+
+        <!-- 右タブ: 上映予約 ＆ スケジュール -->
+        <div id="tab-booking" class="tab-content"></div>
+      `;
+
+      const stampsContainer = document.getElementById("tab-stamps");
+      const bookingContainer = document.getElementById("tab-booking");
+
       eventKeys.forEach(eventId => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
         const bookedDate = userBookings[eventId];
 
-        const card = document.createElement("div");
-        card.className = "card";
-
-        let html = `
+        // --- 1. スタンプタブ用のカード ---
+        const stampCard = document.createElement("div");
+        stampCard.className = "card";
+        
+        let stampHtml = `
           <div class="card-title">${escapeHtml(event.name)}</div>
           <span class="stamp-badge ${isStamped ? 'got' : 'not-got'}">
             ${isStamped ? '✅ スタンプ獲得済み（出席完了）' : '📌 未出席 / スタンプ未獲得'}
           </span>
         `;
 
-        // 予約セクション
-        html += `
+        if (!isStamped) {
+          stampHtml += `
+            <div class="section-box">
+              <div class="section-title">💡 当日クイズ（正解でスタンプGET）</div>
+              <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>問題:</strong> ${escapeHtml(event.question || 'クイズ未設定')}</p>
+              <input type="text" id="answer-input-${eventId}" placeholder="4桁の回答を入力">
+              <button onclick="submitAnswer('${eventId}')" class="secondary">回答してスタンプを押す</button>
+            </div>
+          `;
+        }
+
+        stampHtml += `
+          <div style="margin-top: 15px; text-align: center;">
+            <label>上映へのリアクション・感想を送る</label>
+            <div class="reactions">
+              <button onclick="sendReaction('${eventId}', '❤️')">❤️</button>
+              <button onclick="sendReaction('${eventId}', '👏')">👏</button>
+              <button onclick="sendReaction('${eventId}', '🔥')">🔥</button>
+              <button onclick="sendReaction('${eventId}', '😭')">😭</button>
+            </div>
+          </div>
+        `;
+
+        if (isAdminMode) {
+          stampHtml += `
+            <div class="admin-panel">
+              <h4 style="margin:0 0 10px 0; color:#856404;">【管理者機能】クイズ・回答の変更</h4>
+              <label>問題文:</label>
+              <input type="text" id="admin-q-${eventId}" value="${escapeHtml(event.question || '')}">
+              <label>正解 (数字4桁):</label>
+              <input type="text" id="admin-a-${eventId}" value="${escapeHtml(event.answer || '')}">
+              <button onclick="updateQuestion('${eventId}')" style="background-color: #d35400;">マスターデータを更新</button>
+            </div>
+          `;
+        }
+
+        stampCard.innerHTML = stampHtml;
+        stampsContainer.appendChild(stampCard);
+
+        // --- 2. 予約タブ用のカード ---
+        const bookingCard = document.createElement("div");
+        bookingCard.className = "card";
+
+        let bookingHtml = `
+          <div class="card-title">${escapeHtml(event.name)}</div>
           <div class="section-box">
-            <div class="section-title">📅 上映会の事前予約</div>
+            <div class="section-title">📅 参加日程の選択</div>
             <div class="booking-status">
-              ${bookedDate ? `予約状況: <strong>${escapeHtml(bookedDate)}</strong>` : '予約状況: 未予約'}
+              ${bookedDate ? `現在の予約: <strong>${escapeHtml(bookedDate)}</strong>` : '現在の予約: 未予約'}
             </div>
             <label for="date-select-${eventId}">参加可能日時を選択:</label>
             <select id="date-select-${eventId}">
@@ -407,48 +494,23 @@
           </div>
         `;
 
-        // クイズセクション
-        if (!isStamped) {
-          html += `
-            <div class="section-box">
-              <div class="section-title">💡 当日クイズ（正解でスタンプGET）</div>
-              <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>問題:</strong> ${escapeHtml(event.question || 'クイズ未設定')}</p>
-              <input type="text" id="answer-input-${eventId}" placeholder="4桁の回答を入力">
-              <button onclick="submitAnswer('${eventId}')" class="secondary">回答してスタンプを押す</button>
-            </div>
-          `;
-        }
-
-        // リアクションボタン
-        html += `
-          <div style="margin-top: 15px; text-align: center;">
-            <label>上映へのリアクション・感想を送る</label>
-            <div class="reactions">
-              <button onclick="sendReaction('${eventId}', '❤️')">❤️</button>
-              <button onclick="sendReaction('${eventId}', '👏')">👏</button>
-              <button onclick="sendReaction('${eventId}', '🔥')">🔥</button>
-              <button onclick="sendReaction('${eventId}', '😭')">😭</button>
-            </div>
-          </div>
-        `;
-
-        // 管理者モード
-        if (isAdminMode) {
-          html += `
-            <div class="admin-panel">
-              <h4 style="margin:0 0 10px 0; color:#856404;">【管理者機能】クイズ・回答の変更</h4>
-              <label>問題文:</label>
-              <input type="text" id="admin-q-${eventId}" value="${escapeHtml(event.question || '')}">
-              <label>正解 (数字4桁):</label>
-              <input type="text" id="admin-a-${eventId}" value="${escapeHtml(event.answer || '')}">
-              <button onclick="updateQuestion('${eventId}')" style="background-color: #d35400;">マスターデータを更新</button>
-            </div>
-          `;
-        }
-
-        card.innerHTML = html;
-        container.appendChild(card);
+        bookingCard.innerHTML = bookingHtml;
+        bookingContainer.appendChild(bookingCard);
       });
+    }
+
+    // タブ切り替え関数
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+      if (tabName === 'stamps') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('tab-stamps').classList.add('active');
+      } else {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('tab-booking').classList.add('active');
+      }
     }
 
     async function submitBooking(eventId) {
