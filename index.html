@@ -3,593 +3,466 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>シェアハウス上映会 スタンプラリー</title>
+  <title>シェアハウス 上映会スタンプラリー</title>
   <!-- LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { background-color: #0f172a; color: #f8fafc; font-family: 'Helvetica Neue', Arial, sans-serif; }
-    .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-    .stamp-slot { aspect-ratio: 1; border: 2px dashed #475569; border-radius: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; transition: all 0.3s ease; }
-    .stamp-slot.active { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
-    .stamp-mark { font-size: 2.5rem; color: #f59e0b; transform: rotate(-12deg) scale(0); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-    @keyframes popIn { to { transform: rotate(-12deg) scale(1); } }
+    :root {
+      --primary-color: #2c3e50;
+      --accent-color: #e74c3c;
+      --success-color: #27ae60;
+      --warning-color: #f39c12;
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --border-color: #e1e8ed;
+    }
 
-    /* スワイプ用コンテナの設定 */
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
-    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .tab-content { width: 100%; flex-shrink: 0; }
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 16px;
+      padding-bottom: 50px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 16px;
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .header h1 {
+      font-size: 1.4rem;
+      margin: 0 0 8px 0;
+      color: var(--primary-color);
+    }
+
+    .user-info {
+      font-size: 0.85rem;
+      color: #666;
+      background: #f8f9fa;
+      padding: 6px 12px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-color);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-top: 0;
+      margin-bottom: 10px;
+      border-bottom: 2px solid var(--bg-color);
+      padding-bottom: 8px;
+    }
+
+    .stamp-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+
+    .stamp-badge.got {
+      background-color: #e8f8f5;
+      color: var(--success-color);
+      border: 1px solid var(--success-color);
+    }
+
+    .stamp-badge.not-got {
+      background-color: #fef9e7;
+      color: var(--warning-color);
+      border: 1px solid var(--warning-color);
+    }
+
+    .section-box {
+      background-color: var(--bg-color);
+      padding: 14px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 0.9rem;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #555;
+    }
+
+    .booking-status {
+      font-size: 0.9rem;
+      color: var(--success-color);
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      background-color: #fff;
+    }
+
+    button {
+      width: 100%;
+      padding: 11px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button.secondary {
+      background-color: #7f8c8d;
+    }
+
+    .reactions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .reactions button {
+      flex: 1;
+      background-color: #ffffff;
+      color: #333;
+      border: 1px solid #ddd;
+      font-size: 1.2rem;
+      padding: 8px;
+    }
+
+    .admin-panel {
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      padding: 14px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+
+    .admin-panel h4 {
+      margin: 0 0 10px 0;
+      color: #856404;
+      font-size: 0.95rem;
+    }
+
+    .loading-spinner {
+      text-align: center;
+      padding: 50px 0;
+      color: #777;
+      font-size: 1rem;
+    }
   </style>
 </head>
-<body class="min-h-screen pb-12 flex flex-col items-center">
+<body>
 
-  <div class="w-full max-w-md flex flex-col min-h-screen">
-    <!-- ヘッダー / ユーザー情報 -->
-    <header class="p-4 flex justify-between items-center w-full">
-      <div class="flex items-center space-x-3 glass px-4 py-2 rounded-full">
-        <div id="userAvatar" class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-bold">
-          <i class="fas fa-user"></i>
-        </div>
-        <span id="userName" class="text-sm font-medium">ゲストさん</span>
-      </div>
-      <button onclick="toggleAdminModal()" class="text-xs text-amber-400 hover:text-amber-300 font-semibold px-3 py-1.5 rounded-lg border border-amber-400/30">
-        編集者画面 🔑
-      </button>
-    </header>
-
-    <!-- タイトルカード -->
-    <div class="px-4 mb-4">
-      <div class="glass p-5 rounded-2xl text-center space-y-1 relative overflow-hidden">
-        <div class="absolute -right-6 -top-6 w-24 h-24 bg-amber-500/10 rounded-full blur-xl"></div>
-        <h1 class="text-lg font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent">
-          🎬 ディズニー映画会 スタンプラリー
-        </h1>
-        <p class="text-xs text-slate-400">全4回参加でピザ＆スイーツ100円引き券！</p>
-      </div>
+  <div class="container">
+    <div class="header">
+      <h1>🎬 シェアハウス上映会</h1>
+      <div id="user-display" class="user-info">ユーザー情報を確認中...</div>
     </div>
 
-    <!-- ゼクシィ風 タブナビゲーション -->
-    <div class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
-      <div class="flex relative max-w-md mx-auto">
-        <button id="tabBtn0" onclick="switchTab(0)" class="w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-amber-400 flex items-center justify-center gap-2">
-          <i class="fas fa-stamp"></i> スタンプカード
-        </button>
-        <button id="tabBtn1" onclick="switchTab(1)" class="w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-slate-400 flex items-center justify-center gap-2">
-          <i class="fas fa-calendar-alt"></i> 上映スケジュール
-        </button>
-        <!-- アクティブインジケーター（下線） -->
-        <div id="tabIndicator" class="absolute bottom-0 left-0 w-1/2 h-0.5 bg-amber-400 transition-transform duration-300 ease-in-out"></div>
-      </div>
-    </div>
-
-    <!-- 横スライド可能なメインコンテンツエリア -->
-    <main class="flex-1 relative overflow-hidden w-full">
-      <div id="tabContainer" class="flex w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth">
-        
-        <!-- 左タブ：スタンプカード -->
-        <section class="tab-content snap-start px-4 py-4 space-y-4">
-          <div class="glass p-5 rounded-2xl space-y-4">
-            <div class="flex justify-between items-center">
-              <h2 class="text-sm font-bold text-slate-300 flex items-center gap-2">
-                <i class="fas fa-stamp text-amber-400"></i> スタンプ獲得状況
-              </h2>
-              <span id="stampCount" class="text-xs bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-full font-bold">0 / 4</span>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3" id="stampGrid">
-              <!-- JSで動的生成 -->
-            </div>
-          </div>
-        </section>
-
-        <!-- 右タブ：上映スケジュール＆予約 -->
-        <section class="tab-content snap-start px-4 py-4 space-y-3">
-          <h2 class="text-sm font-bold text-slate-300 px-1 flex items-center gap-2">
-            <i class="fas fa-calendar-alt text-indigo-400"></i> 上映作品 ＆ 予約
-          </h2>
-
-          <div id="eventList" class="space-y-3">
-            <!-- JSで動的生成 -->
-          </div>
-        </section>
-
-      </div>
-    </main>
-  </div>
-
-  <!-- モーダル：事前予約 -->
-  <div id="bookingModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-    <div class="glass max-w-xs w-full p-5 rounded-2xl space-y-4 text-center">
-      <h3 id="bookingTitle" class="font-bold text-base text-slate-100"></h3>
-      <div id="currentBookingNotice" class="text-xs text-amber-300 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20 hidden"></div>
-      
-      <!-- 日程選択リスト -->
-      <div id="dateOptions" class="space-y-2 text-left">
-        <!-- 日程ボタンが動的に挿入されます -->
-      </div>
-
-      <!-- 操作ボタン -->
-      <div class="space-y-2 pt-2 border-t border-slate-700/50">
-        <button id="confirmBookingBtn" onclick="submitBooking()" disabled class="w-full py-2.5 bg-slate-700 text-slate-500 font-bold rounded-xl text-xs transition cursor-not-allowed">
-          日程を選択してください
-        </button>
-        <button onclick="closeModal('bookingModal')" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-xs">
-          キャンセル
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- モーダル：スタンプ押印（クイズ回答） -->
-  <div id="stampModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-    <div class="glass max-w-xs w-full p-5 rounded-2xl space-y-4">
-      <h3 class="font-bold text-base text-slate-100 text-center">出席スタンプを押す</h3>
-      <p id="quizQuestion" class="text-xs text-amber-300 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20"></p>
-      <input type="text" id="quizAnswer" placeholder="答えを入力" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
-      <div class="flex gap-2">
-        <button onclick="closeModal('stampModal')" class="w-1/2 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs">閉じる</button>
-        <button onclick="submitQuiz()" class="w-1/2 py-2 bg-amber-500 hover:bg-amber-600 font-bold rounded-xl text-xs text-slate-950">送信する</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- モーダル：管理者編集画面 -->
-  <div id="adminModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-    <div class="glass max-w-sm w-full p-5 rounded-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-      <h3 class="font-bold text-base text-slate-100 flex items-center justify-between">
-        <span>🔑 編集者・管理者画面</span>
-        <button onclick="closeModal('adminModal')" class="text-slate-400 text-sm">&times;</button>
-      </h3>
-
-      <!-- 1. 問題の更新 -->
-      <div class="space-y-2 border-t border-slate-700/50 pt-3">
-        <label class="text-xs text-slate-400 font-semibold">秘密の質問・正解の更新</label>
-        <select id="adminEventSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200"></select>
-        <input type="text" id="adminQuestionInput" placeholder="新しい質問文" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200">
-        <input type="text" id="adminAnswerInput" placeholder="新しい正解コード" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200">
-        <button onclick="saveQuestion()" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-semibold">質問を更新する</button>
-      </div>
-
-      <!-- 2. 手動スタンプ付与 -->
-      <div class="space-y-2 border-t border-slate-700/50 pt-3">
-        <label class="text-xs text-slate-400 font-semibold">代理スタンプ押印</label>
-        <input type="text" id="manualUserName" placeholder="参加者の名前" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200">
-        <button onclick="giveManualStamp()" class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl text-xs font-semibold">スタンプを押してあげる</button>
-      </div>
-
-      <!-- 3. 集計ダッシュボード -->
-      <div class="space-y-2 border-t border-slate-700/50 pt-3 text-xs">
-        <label class="text-xs text-slate-400 font-semibold">参加状況ダッシュボード</label>
-        <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="bg-slate-900/80 p-2 rounded-xl border border-slate-700">
-            <div class="text-slate-400 text-[10px]">総予約数</div>
-            <div id="dashBookings" class="font-bold text-amber-400 text-sm">--</div>
-          </div>
-          <div class="bg-slate-900/80 p-2 rounded-xl border border-slate-700">
-            <div class="text-slate-400 text-[10px]">総スタンプ</div>
-            <div id="dashStamps" class="font-bold text-amber-400 text-sm">--</div>
-          </div>
-          <div class="bg-slate-900/80 p-2 rounded-xl border border-slate-700">
-            <div class="text-slate-400 text-[10px]">コンプリート</div>
-            <div id="dashCompleters" class="font-bold text-amber-400 text-sm">--</div>
-          </div>
-        </div>
-        <button onclick="loadDashboard()" class="w-full py-1.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs">最新データを集計</button>
-      </div>
+    <div id="content" class="loading-spinner">
+      データを読み込んでいます...
     </div>
   </div>
 
   <script>
-    // --- 設定項目 ---
-    const LIFF_ID = "2011577734-Ymuphm2J";
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQ1gPV_8qG7bpPHRNBJsvPw1VhBCdD1BS80lcA/exec";
+    // ==========================================
+    // 設定項目 (ご自身の環境に合わせて置き換えてください)
+    // ==========================================
+    const GAS_URL = "YOUR_GAS_WEB_APP_URL"; 
+    const LIFF_ID = "YOUR_LIFF_ID"; 
 
-    // --- デフォルトデータ ---
-    let masterEvents = {
-      "alice": {
-        name: "① アリス",
-        question: "アリスが飲むとおおきくなる飲み物は？",
-        answer: "1111",
-        dates: ["10/10 19:00", "10/12 14:00"]
-      },
-      "tron": {
-        name: "② トロン",
-        question: "グリッドの世界のバイクは？",
-        answer: "1111",
-        dates: ["10/24 20:00"]
-      }
-    };
-
-    let currentUser = { userId: "guest_" + Math.random().toString(36).substring(2, 9), displayName: "ゲスト" };
-    let userBookings = {}; // { eventId: "10/10 19:00" } の形で予約日時を保持
+    // グローバル状態管理
+    let currentUser = { userId: "guest", displayName: "ゲスト" };
+    let masterEvents = {};
+    let userBookings = {};
     let userStamps = [];
-    let activeTargetEventId = null;
-    let tempSelectedDate = null;
+    let isAdminMode = false;
 
-    // --- タブ切り替え制御 ---
-    function switchTab(index) {
-      const container = document.getElementById("tabContainer");
-      const width = container.clientWidth;
-      container.scrollTo({ left: width * index, behavior: 'smooth' });
-      updateTabUI(index);
-    }
+    // 画面ロード時の初期化処理
+    window.onload = async function() {
+      // URLパラメータ ?mode=admin の判定
+      const urlParams = new URLSearchParams(window.location.search);
+      isAdminMode = urlParams.get('mode') === 'admin';
 
-    function updateTabUI(index) {
-      const indicator = document.getElementById("tabIndicator");
-      const btn0 = document.getElementById("tabBtn0");
-      const btn1 = document.getElementById("tabBtn1");
-
-      indicator.style.transform = `translateX(${index * 100}%)`;
-
-      if (index === 0) {
-        btn0.className = "w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-amber-400 flex items-center justify-center gap-2";
-        btn1.className = "w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-slate-400 flex items-center justify-center gap-2";
-      } else {
-        btn0.className = "w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-slate-400 flex items-center justify-center gap-2";
-        btn1.className = "w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-indigo-400 flex items-center justify-center gap-2";
+      // LIFF初期化
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          currentUser.userId = profile.userId;
+          currentUser.displayName = profile.displayName;
+        } else {
+          liff.login();
+          return;
+        }
+      } catch (err) {
+        console.warn("LIFF初期化エラーまたは外部ブラウザ実行です:", err);
+        // デバッグ用フォールバック
+        currentUser.userId = "test_user_01";
+        currentUser.displayName = "開発用ユーザー";
       }
-    }
 
-    // スクロール検知でタブ自動連動（指スワイプ対応）
-    document.addEventListener("DOMContentLoaded", () => {
-      const container = document.getElementById("tabContainer");
-      container.addEventListener("scroll", () => {
-        const width = container.clientWidth;
-        const page = Math.round(container.scrollLeft / width);
-        updateTabUI(page);
-      });
-    });
-
-    // --- 画面描画 ---
-    function renderApp() {
-      const eventKeys = Object.keys(masterEvents);
-
-      // 1. スタンプカード
-      const stampGrid = document.getElementById("stampGrid");
-      stampGrid.innerHTML = "";
-
-      eventKeys.forEach((key, index) => {
-        const isStamped = userStamps.includes(key);
-        const html = `
-          <div class="stamp-slot ${isStamped ? 'active' : ''}">
-            <span class="text-[10px] text-slate-500 absolute top-2 left-2">#0${index + 1}</span>
-            ${isStamped 
-              ? `<div class="stamp-mark"><i class="fas fa-check-circle"></i></div><span class="text-[10px] text-amber-400 font-bold mt-1">済</span>`
-              : `<i class="fas fa-film text-slate-700 text-2xl"></i><span class="text-[10px] text-slate-500 mt-1 center text-center px-1">${masterEvents[key].name}</span>`
-            }
-          </div>
-        `;
-        stampGrid.innerHTML += html;
-      });
-
-      document.getElementById("stampCount").textContent = `${userStamps.length} / ${eventKeys.length}`;
-
-      // 2. イベントリスト（予約済み日時を表示）
-      const eventList = document.getElementById("eventList");
-      eventList.innerHTML = "";
-
-      eventKeys.forEach(key => {
-        const ev = masterEvents[key];
-        const bookingTime = userBookings[key]; 
-        const isBooked = !!bookingTime;
-        const isStamped = userStamps.includes(key);
-
-        const html = `
-          <div class="glass p-4 rounded-xl space-y-3">
-            <div class="flex justify-between items-center">
-              <h3 class="font-bold text-sm text-slate-100">${ev.name}</h3>
-              <div class="flex gap-1 flex-wrap justify-end">
-                ${isBooked ? `<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">✓ 予約: ${bookingTime}</span>` : ''}
-                ${isStamped ? `<span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">スタンプ済</span>` : ''}
-              </div>
-            </div>
-
-            <!-- リアクションボタン -->
-            <div class="flex gap-2 text-xs">
-              <button onclick="sendReaction('${key}', '❤️')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-700">❤️ 楽しみ</button>
-              <button onclick="sendReaction('${key}', '🙌')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-700">🙌 行く！</button>
-            </div>
-
-            <!-- アクションボタン -->
-            <div class="flex gap-2 pt-1">
-              <button onclick="openBookingModal('${key}')" class="w-1/2 py-2 ${isBooked ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 text-white'} text-xs font-semibold rounded-xl transition">
-                ${isBooked ? '予約日時を変更' : '日程を選んで予約'}
-              </button>
-              <button onclick="openStampModal('${key}')" ${isStamped ? 'disabled' : ''} class="w-1/2 py-2 ${isStamped ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'} text-xs font-bold rounded-xl transition">
-                ${isStamped ? 'スタンプ獲得済み' : 'スタンプを押す 🎯'}
-              </button>
-            </div>
-          </div>
-        `;
-        eventList.innerHTML += html;
-      });
-    }
-
-    // --- LIFF初期化 & サーバー同期 ---
-    window.onload = function() {
-      if (typeof liff !== "undefined" && LIFF_ID && LIFF_ID !== "YOUR_LIFF_ID") {
-        liff.init({ liffId: LIFF_ID })
-          .then(() => {
-            if (liff.isLoggedIn()) {
-              liff.getProfile().then(profile => {
-                currentUser.userId = profile.userId;
-                currentUser.displayName = profile.displayName;
-                document.getElementById('userName').textContent = currentUser.displayName;
-                if(profile.pictureUrl) {
-                  document.getElementById('userAvatar').innerHTML = `<img src="${profile.pictureUrl}" class="w-full h-full rounded-full">`;
-                }
-                syncServer();
-              }).catch(() => syncServer());
-            } else {
-              syncServer();
-            }
-          })
-          .catch(err => {
-            console.error("LIFF Error:", err);
-            syncServer();
-          });
-      } else {
-        syncServer();
-      }
+      document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様`;
+      await loadStatus();
     };
 
-    function syncServer() {
-      renderApp();
+    // スプレッドシートからの最新データ取得
+    async function loadStatus() {
+      try {
+        const response = await fetch(`${GAS_URL}?action=GET_STATUS&userId=${encodeURIComponent(currentUser.userId)}`);
+        const data = await response.json();
 
-      if (!GAS_URL || GAS_URL.includes("YOUR_GAS_WEB_APP_URL")) return;
+        masterEvents = data.events || {};
+        userBookings = data.userBookings || {};
+        userStamps = data.userStamps || [];
 
-      const url = `${GAS_URL}?action=GET_STATUS&userId=${encodeURIComponent(currentUser.userId)}`;
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          if(data && data.events && Object.keys(data.events).length > 0) {
-            masterEvents = data.events;
-          }
-          if(data && data.userBookings) {
-            userBookings = data.userBookings;
-          }
-          if(data && data.userStamps) {
-            userStamps = data.userStamps;
-          }
-          renderApp();
-          updateAdminSelectOptions();
-        })
-        .catch(err => {
-          console.error("GASデータ取得失敗:", err);
-          renderApp();
-          updateAdminSelectOptions();
-        });
-    }
-
-    // --- モーダル・日程選択処理 ---
-    function openBookingModal(eventId) {
-      activeTargetEventId = eventId;
-      tempSelectedDate = null;
-      const ev = masterEvents[eventId];
-      document.getElementById("bookingTitle").textContent = `${ev.name} の予約`;
-      
-      const noticeEl = document.getElementById("currentBookingNotice");
-      if (userBookings[eventId]) {
-        noticeEl.textContent = `現在：${userBookings[eventId]}`;
-        noticeEl.classList.remove("hidden");
-      } else {
-        noticeEl.classList.add("hidden");
+        renderApp();
+      } catch (err) {
+        console.error("データ取得失敗:", err);
+        document.getElementById("content").innerHTML = `
+          <div style="text-align:center; color:red; padding: 20px;">
+            データの読み込みに失敗しました。<br>時間をおいて再度お試しください。
+          </div>
+        `;
       }
-
-      renderDateOptions();
-      updateConfirmButton();
-      document.getElementById("bookingModal").classList.remove("hidden");
     }
 
-    function renderDateOptions() {
-      if (!activeTargetEventId || !masterEvents[activeTargetEventId]) return;
-      const ev = masterEvents[activeTargetEventId];
-      const container = document.getElementById("dateOptions");
+    // メインUIの描画処理
+    function renderApp() {
+      const container = document.getElementById("content");
+      container.className = "";
       container.innerHTML = "";
 
-      if (!ev.dates || ev.dates.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 text-center">調整中のため選択できる日程がありません</p>`;
+      const eventKeys = Object.keys(masterEvents);
+      if (eventKeys.length === 0) {
+        container.innerHTML = "<p style='text-align:center;'>現在登録されている上映イベントはありません。</p>";
         return;
       }
 
-      ev.dates.forEach(dateStr => {
-        const isSelected = tempSelectedDate === dateStr;
-        const isCurrentBooking = userBookings[activeTargetEventId] === dateStr;
+      eventKeys.forEach(eventId => {
+        const event = masterEvents[eventId];
+        const isStamped = userStamps.includes(eventId);
+        const bookedDate = userBookings[eventId];
 
-        let btnClass = "bg-slate-800 border-transparent text-slate-200";
-        if (isSelected) {
-          btnClass = "bg-indigo-600 border-indigo-400 text-white font-bold ring-2 ring-indigo-400/50";
+        const card = document.createElement("div");
+        card.className = "card";
+
+        let html = `
+          <div class="card-title">${escapeHtml(event.name)}</div>
+          <span class="stamp-badge ${isStamped ? 'got' : 'not-got'}">
+            ${isStamped ? '✅ スタンプ獲得済み（出席完了）' : '📌 未出席 / スタンプ未獲得'}
+          </span>
+        `;
+
+        // --- 1. 予約セクション ---
+        html += `
+          <div class="section-box">
+            <div class="section-title">📅 上映会の事前予約</div>
+            <div class="booking-status">
+              ${bookedDate ? `予約状況: <strong>${escapeHtml(bookedDate)}</strong>` : '予約状況: 未予約'}
+            </div>
+            <label for="date-select-${eventId}">参加可能日時を選択:</label>
+            <select id="date-select-${eventId}">
+              ${event.dates.length > 0 
+                ? event.dates.map(d => `<option value="${escapeHtml(d)}" ${d === bookedDate ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')
+                : '<option value="">日程未定</option>'
+              }
+            </select>
+            <button onclick="submitBooking('${eventId}')">${bookedDate ? '予約日程を変更する' : 'この日程で予約する'}</button>
+          </div>
+        `;
+
+        // --- 2. クイズ・スタンプ獲得セクション ---
+        if (!isStamped) {
+          html += `
+            <div class="section-box">
+              <div class="section-title">💡 当日クイズ（正解でスタンプGET）</div>
+              <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>問題:</strong> ${escapeHtml(event.question || 'クイズ未設定')}</p>
+              <input type="text" id="answer-input-${eventId}" placeholder="4桁の回答を入力">
+              <button onclick="submitAnswer('${eventId}')" class="secondary">回答してスタンプを押す</button>
+            </div>
+          `;
         }
 
-        container.innerHTML += `
-          <button onclick="selectDateTemp('${dateStr}')" class="w-full text-left py-2.5 px-4 border rounded-xl text-xs font-semibold flex justify-between items-center transition ${btnClass}">
-            <span>🗓️ ${dateStr} ${isCurrentBooking ? '<span class="text-[10px] text-amber-300 ml-1">(現在の予約)</span>' : ''}</span>
-            ${isSelected ? '<i class="fas fa-check text-amber-300"></i>' : '<i class="far fa-circle text-slate-500"></i>'}
-          </button>
+        // --- 3. リアクションボタンセクション ---
+        html += `
+          <div style="margin-top: 15px; text-align: center;">
+            <label>上映へのリアクション・感想を送る</label>
+            <div class="reactions">
+              <button onclick="sendReaction('${eventId}', '❤️')">❤️</button>
+              <button onclick="sendReaction('${eventId}', '👏')">👏</button>
+              <button onclick="sendReaction('${eventId}', '🔥')">🔥</button>
+              <button onclick="sendReaction('${eventId}', '😭')">😭</button>
+            </div>
+          </div>
         `;
+
+        // --- 4. 管理者用クイズ編集パネル ---
+        if (isAdminMode) {
+          html += `
+            <div class="admin-panel">
+              <h4>【管理者機能】クイズ・回答の変更</h4>
+              <label>問題文:</label>
+              <input type="text" id="admin-q-${eventId}" value="${escapeHtml(event.question || '')}">
+              <label>正解 (数字4桁):</label>
+              <input type="text" id="admin-a-${eventId}" value="${escapeHtml(event.answer || '')}">
+              <button onclick="updateQuestion('${eventId}')" style="background-color: #d35400;">マスターデータを更新</button>
+            </div>
+          `;
+        }
+
+        card.innerHTML = html;
+        container.appendChild(card);
       });
     }
 
-    function selectDateTemp(dateStr) {
-      tempSelectedDate = dateStr;
-      renderDateOptions();
-      updateConfirmButton();
-    }
-
-    function updateConfirmButton() {
-      const btn = document.getElementById("confirmBookingBtn");
-      if (tempSelectedDate) {
-        btn.disabled = false;
-        btn.className = "w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition cursor-pointer";
-        btn.textContent = `「${tempSelectedDate}」で予約確定する`;
-      } else {
-        btn.disabled = true;
-        btn.className = "w-full py-2.5 bg-slate-700 text-slate-500 font-bold rounded-xl text-xs transition cursor-not-allowed";
-        btn.textContent = "日程を選択してください";
-      }
-    }
-
-    function submitBooking() {
-      if (!tempSelectedDate) return;
-
-      fetch(GAS_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "BOOKING",
-          userId: currentUser.userId,
-          displayName: currentUser.displayName,
-          eventId: activeTargetEventId,
-          detail: tempSelectedDate
-        })
-      });
-
-      userBookings[activeTargetEventId] = tempSelectedDate;
-      closeModal("bookingModal");
-      renderApp();
-      alert(`「${tempSelectedDate}」で予約を確定しました！`);
-    }
-
-    // --- クイズ＆スタンプ処理 (CORSエラー対策版) ---
-    function openStampModal(eventId) {
-      activeTargetEventId = eventId;
-      const ev = masterEvents[eventId];
-      document.getElementById("quizQuestion").textContent = `❓ 質問: ${ev.question}`;
-      document.getElementById("quizAnswer").value = "";
-      document.getElementById("stampModal").classList.remove("hidden");
-    }
-
-    function submitQuiz() {
-      const answer = document.getElementById("quizAnswer").value.trim();
-      if (!answer) {
-        alert("答えを入力してください！");
+    // --- 事前予約の送信 ---
+    async function submitBooking(eventId) {
+      const selectElem = document.getElementById(`date-select-${eventId}`);
+      const selectedDate = selectElem ? selectElem.value : "";
+      
+      if (!selectedDate) {
+        alert("予約する日程を選択してください。");
         return;
       }
 
-      // クライアント側で即時判定（CORS通信エラーを未然に防止）
-      const ev = masterEvents[activeTargetEventId];
-      const isCorrect = ev && (String(ev.answer).trim() === answer);
+      const payload = {
+        action: "BOOKING",
+        userId: currentUser.userId,
+        displayName: currentUser.displayName,
+        eventId: eventId,
+        detail: selectedDate
+      };
 
-      if (!isCorrect) {
-        alert("❌ 答えが違います！");
+      await sendPost(payload);
+      alert(`「${masterEvents[eventId].name}」を ${selectedDate} で予約完了しました！`);
+      await loadStatus();
+    }
+
+    // --- 当日クイズ回答 & スタンプ取得 ---
+    async function submitAnswer(eventId) {
+      const inputVal = document.getElementById(`answer-input-${eventId}`).value.trim();
+      const correctAnswer = masterEvents[eventId].answer;
+
+      if (!inputVal) {
+        alert("回答を入力してください。");
         return;
       }
 
-      // GASへ非同期送信 (no-corsモードで確実にデータを保存)
-      fetch(GAS_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      if (inputVal === correctAnswer) {
+        const payload = {
           action: "CHECK_STAMP",
           userId: currentUser.userId,
           displayName: currentUser.displayName,
-          eventId: activeTargetEventId,
-          answer: answer
-        })
-      });
-
-      // UIを即時更新
-      if (!userStamps.includes(activeTargetEventId)) {
-        userStamps.push(activeTargetEventId);
+          eventId: eventId
+        };
+        await sendPost(payload);
+        alert("🎉 正解です！スタンプを獲得しました！");
+        await loadStatus();
+      } else {
+        alert("❌ 残念！回答が正しくありません。");
       }
-      closeModal("stampModal");
-      renderApp();
-      alert("🎉 正解！スタンプを獲得しました！");
     }
 
-    function sendReaction(eventId, emoji) {
-      fetch(GAS_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "REACTION",
-          userId: currentUser.userId,
-          displayName: currentUser.displayName,
-          eventId: eventId,
-          detail: emoji
-        })
-      });
-      alert(`リアクション 「${emoji}」 を送信しました！`);
+    // --- リアクション送信 ---
+    async function sendReaction(eventId, reaction) {
+      const payload = {
+        action: "REACTION",
+        userId: currentUser.userId,
+        displayName: currentUser.displayName,
+        eventId: eventId,
+        detail: reaction
+      };
+      await sendPost(payload);
+      alert(`リアクション ${reaction} を送信しました！`);
     }
 
-    function closeModal(modalId) {
-      document.getElementById(modalId).classList.add("hidden");
+    // --- 管理者：クイズ更新 ---
+    async function updateQuestion(eventId) {
+      const newQuestion = document.getElementById(`admin-q-${eventId}`).value;
+      const newAnswer = document.getElementById(`admin-a-${eventId}`).value;
+
+      const payload = {
+        action: "UPDATE_QUESTION",
+        eventId: eventId,
+        question: newQuestion,
+        answer: newAnswer
+      };
+
+      await sendPost(payload);
+      alert("クイズと回答の更新が完了しました。");
+      await loadStatus();
     }
 
-    // --- 管理者画面 ---
-    function toggleAdminModal() {
-      document.getElementById("adminModal").classList.toggle("hidden");
-    }
-
-    function updateAdminSelectOptions() {
-      const select = document.getElementById("adminEventSelect");
-      select.innerHTML = "";
-      Object.keys(masterEvents).forEach(key => {
-        select.innerHTML += `<option value="${key}">${masterEvents[key].name}</option>`;
-      });
-    }
-
-    function saveQuestion() {
-      const eventId = document.getElementById("adminEventSelect").value;
-      const q = document.getElementById("adminQuestionInput").value;
-      const a = document.getElementById("adminAnswerInput").value;
-
-      fetch(GAS_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "UPDATE_QUESTION",
-          eventId: eventId,
-          question: q,
-          answer: a
-        })
-      });
-
-      if (masterEvents[eventId]) {
-        if(q) masterEvents[eventId].question = q;
-        if(a) masterEvents[eventId].answer = a;
+    // --- 通信用汎用POST関数 ---
+    async function sendPost(payload) {
+      try {
+        await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        console.error("通信エラー:", err);
+        alert("エラーが発生しました。通信環境をご確認ください。");
       }
-      alert("質問を更新しました！");
-      renderApp();
     }
 
-    function giveManualStamp() {
-      const targetName = document.getElementById("manualUserName").value;
-      const eventId = document.getElementById("adminEventSelect").value;
-      if (!targetName) {
-        alert("名前を入力してください");
-        return;
-      }
-
-      fetch(GAS_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "MANUAL_STAMP",
-          eventId: eventId,
-          targetName: targetName
-        })
-      });
-      alert(`${targetName} さんに手動スタンプを付与しました！`);
-    }
-
-    function loadDashboard() {
-      fetch(`${GAS_URL}?action=GET_DASHBOARD`)
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById("dashBookings").textContent = data.totalBookings || 0;
-          document.getElementById("dashStamps").textContent = data.totalStamps || 0;
-          document.getElementById("dashCompleters").textContent = data.completers || 0;
-        })
-        .catch(() => alert("集計データの取得に失敗しました"));
+    // XSS対策エスケープ関数
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
   </script>
 </body>
