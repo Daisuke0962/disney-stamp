@@ -18,18 +18,15 @@
       --border-color: #e1e8ed;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-color);
       margin: 0;
       padding: 16px;
       padding-bottom: 50px;
-      line-height: 1.5;
     }
 
     .container {
@@ -59,6 +56,47 @@
       padding: 6px 12px;
       border-radius: 20px;
       display: inline-block;
+    }
+
+    .loading-container {
+      text-align: center;
+      padding: 40px 20px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .progress-bar-wrapper {
+      width: 100%;
+      background-color: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0 10px 0;
+      height: 12px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background-color: var(--primary-color);
+      transition: width 0.5s ease;
+    }
+
+    .status-text {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .error-box {
+      color: var(--accent-color);
+      background-color: #fde8e8;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 0.85rem;
+      text-align: left;
+      word-break: break-all;
     }
 
     .card {
@@ -149,16 +187,9 @@
       font-size: 0.95rem;
       font-weight: bold;
       cursor: pointer;
-      transition: opacity 0.2s;
     }
 
-    button:hover {
-      opacity: 0.9;
-    }
-
-    button.secondary {
-      background-color: #7f8c8d;
-    }
+    button.secondary { background-color: #7f8c8d; }
 
     .reactions {
       display: flex;
@@ -182,19 +213,6 @@
       border-radius: 8px;
       margin-top: 16px;
     }
-
-    .admin-panel h4 {
-      margin: 0 0 10px 0;
-      color: #856404;
-      font-size: 0.95rem;
-    }
-
-    .loading-spinner {
-      text-align: center;
-      padding: 50px 0;
-      color: #777;
-      font-size: 1rem;
-    }
   </style>
 </head>
 <body>
@@ -205,78 +223,149 @@
       <div id="user-display" class="user-info">ユーザー情報を確認中...</div>
     </div>
 
-    <div id="content" class="loading-spinner">
-      データを読み込んでいます...
+    <!-- ローディング / コンテンツ表示領域 -->
+    <div id="content">
+      <div class="loading-container">
+        <div id="status-text" class="status-text">アプリを初期化中...</div>
+        <div class="progress-bar-wrapper">
+          <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <div id="progress-percent" style="font-size:0.8rem; color:#888;">10%</div>
+        <div id="error-container"></div>
+      </div>
     </div>
   </div>
 
   <script>
-    // ==========================================
-    // 設定項目 (ご自身の環境に合わせて置き換えてください)
-    // ==========================================
+    // ★設定項目
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec"; 
     const LIFF_ID = "2011577734-Ymuphm2J"; 
 
-    // グローバル状態管理
     let currentUser = { userId: "guest", displayName: "ゲスト" };
     let masterEvents = {};
     let userBookings = {};
     let userStamps = [];
     let isAdminMode = false;
 
-    // 画面ロード時の初期化処理
+    function updateProgress(percent, text) {
+      const bar = document.getElementById("progress-bar");
+      const statusText = document.getElementById("status-text");
+      const percentText = document.getElementById("progress-percent");
+      
+      if (bar) bar.style.width = percent + "%";
+      if (statusText) statusText.innerText = text;
+      if (percentText) percentText.innerText = Math.floor(percent) + "%";
+    }
+
+    function showError(message, detail = "") {
+      const container = document.getElementById("error-container");
+      if (container) {
+        container.innerHTML = `
+          <div class="error-box">
+            <strong>エラーが発生しました:</strong><br>
+            ${message}
+            ${detail ? `<br><small style="opacity:0.8;">詳細: ${detail}</small>` : ''}
+          </div>
+          <button onclick="location.reload()" style="margin-top:15px; background-color:#e74c3c;">再読み込み</button>
+        `;
+      }
+    }
+
     window.onload = async function() {
-      // URLパラメータ ?mode=admin の判定
       const urlParams = new URLSearchParams(window.location.search);
       isAdminMode = urlParams.get('mode') === 'admin';
 
-      // LIFF初期化
+      // 1. LIFF初期化
+      updateProgress(20, "LINEアカウント認証中...");
       try {
-        await liff.init({ liffId: LIFF_ID });
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          currentUser.userId = profile.userId;
-          currentUser.displayName = profile.displayName;
+        if (LIFF_ID && !LIFF_ID.includes("YOUR_")) {
+          await liff.init({ liffId: LIFF_ID });
+          if (liff.isLoggedIn()) {
+            const profile = await liff.getProfile();
+            currentUser.userId = profile.userId;
+            currentUser.displayName = profile.displayName;
+          } else {
+            liff.login();
+            return;
+          }
         } else {
-          liff.login();
-          return;
+          console.warn("LIFF ID未設定のためデバッグモードで動かします");
+          currentUser.userId = "test_user_01";
+          currentUser.displayName = "開発用ユーザー";
         }
       } catch (err) {
-        console.warn("LIFF初期化エラーまたは外部ブラウザ実行です:", err);
-        // デバッグ用フォールバック
+        console.warn("LIFF初期化スキップ:", err);
         currentUser.userId = "test_user_01";
         currentUser.displayName = "開発用ユーザー";
       }
 
       document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様`;
+
+      // 2. GASからのデータ取得
+      updateProgress(30, "サーバーへ接続中...");
       await loadStatus();
     };
 
-    // スプレッドシートからの最新データ取得
     async function loadStatus() {
+      if (!GAS_URL || GAS_URL.includes("YOUR_")) {
+        showError("GASのURL（GAS_URL）が未設定です。", "index.html 内の GAS_URL を正しいWebアプリURLに書き換えてください。");
+        return;
+      }
+
+      // 経過時間に応じたプログレスバーとメッセージのシミュレーション
+      let currentPercent = 30;
+      const progressTimer = setInterval(() => {
+        if (currentPercent < 85) {
+          currentPercent += 1.5;
+          let msg = "サーバーと通信中...";
+          if (currentPercent > 45) msg = "GASを起動中... (少し時間がかかります)";
+          if (currentPercent > 70) msg = "スプレッドシートから最新データを読み込み中...";
+          updateProgress(currentPercent, msg);
+        }
+      }, 500);
+
       try {
-        const response = await fetch(`${GAS_URL}?action=GET_STATUS&userId=${encodeURIComponent(currentUser.userId)}`);
+        // ★ タイムアウトを 45秒 (45000ms) に設定
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+        const response = await fetch(`${GAS_URL}?action=GET_STATUS&userId=${encodeURIComponent(currentUser.userId)}`, {
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        clearInterval(progressTimer);
+
+        if (!response.ok) {
+          throw new Error(`HTTPエラー Status: ${response.status}`);
+        }
+
         const data = await response.json();
+
+        updateProgress(95, "画面を作成中...");
 
         masterEvents = data.events || {};
         userBookings = data.userBookings || {};
         userStamps = data.userStamps || [];
 
-        renderApp();
+        updateProgress(100, "完了!");
+        setTimeout(() => {
+          renderApp();
+        }, 300);
+
       } catch (err) {
-        console.error("データ取得失敗:", err);
-        document.getElementById("content").innerHTML = `
-          <div style="text-align:center; color:red; padding: 20px;">
-            データの読み込みに失敗しました。<br>時間をおいて再度お試しください。
-          </div>
-        `;
+        clearInterval(progressTimer);
+        console.error("データ取得エラー:", err);
+        if (err.name === 'AbortError') {
+          showError("通信がタイムアウト（45秒）しました。", "サーバーからの応答がありませんでした。少し時間をおいて再度お試しいただくか、GASのアクセス設定をご確認ください。");
+        } else {
+          showError("データの読み込みに失敗しました。", err.message);
+        }
       }
     }
 
-    // メインUIの描画処理
     function renderApp() {
       const container = document.getElementById("content");
-      container.className = "";
       container.innerHTML = "";
 
       const eventKeys = Object.keys(masterEvents);
@@ -300,7 +389,7 @@
           </span>
         `;
 
-        // --- 1. 予約セクション ---
+        // 予約セクション
         html += `
           <div class="section-box">
             <div class="section-title">📅 上映会の事前予約</div>
@@ -318,7 +407,7 @@
           </div>
         `;
 
-        // --- 2. クイズ・スタンプ獲得セクション ---
+        // クイズセクション
         if (!isStamped) {
           html += `
             <div class="section-box">
@@ -330,7 +419,7 @@
           `;
         }
 
-        // --- 3. リアクションボタンセクション ---
+        // リアクションボタン
         html += `
           <div style="margin-top: 15px; text-align: center;">
             <label>上映へのリアクション・感想を送る</label>
@@ -343,11 +432,11 @@
           </div>
         `;
 
-        // --- 4. 管理者用クイズ編集パネル ---
+        // 管理者モード
         if (isAdminMode) {
           html += `
             <div class="admin-panel">
-              <h4>【管理者機能】クイズ・回答の変更</h4>
+              <h4 style="margin:0 0 10px 0; color:#856404;">【管理者機能】クイズ・回答の変更</h4>
               <label>問題文:</label>
               <input type="text" id="admin-q-${eventId}" value="${escapeHtml(event.question || '')}">
               <label>正解 (数字4桁):</label>
@@ -362,7 +451,6 @@
       });
     }
 
-    // --- 事前予約の送信 ---
     async function submitBooking(eventId) {
       const selectElem = document.getElementById(`date-select-${eventId}`);
       const selectedDate = selectElem ? selectElem.value : "";
@@ -385,7 +473,6 @@
       await loadStatus();
     }
 
-    // --- 当日クイズ回答 & スタンプ取得 ---
     async function submitAnswer(eventId) {
       const inputVal = document.getElementById(`answer-input-${eventId}`).value.trim();
       const correctAnswer = masterEvents[eventId].answer;
@@ -410,7 +497,6 @@
       }
     }
 
-    // --- リアクション送信 ---
     async function sendReaction(eventId, reaction) {
       const payload = {
         action: "REACTION",
@@ -423,7 +509,6 @@
       alert(`リアクション ${reaction} を送信しました！`);
     }
 
-    // --- 管理者：クイズ更新 ---
     async function updateQuestion(eventId) {
       const newQuestion = document.getElementById(`admin-q-${eventId}`).value;
       const newAnswer = document.getElementById(`admin-a-${eventId}`).value;
@@ -440,7 +525,6 @@
       await loadStatus();
     }
 
-    // --- 通信用汎用POST関数 ---
     async function sendPost(payload) {
       try {
         await fetch(GAS_URL, {
@@ -454,7 +538,6 @@
       }
     }
 
-    // XSS対策エスケープ関数
     function escapeHtml(str) {
       if (!str) return "";
       return String(str)
