@@ -438,7 +438,7 @@
             <div class="section-box">
               <div class="section-title">💡 当日クイズ（正解でスタンプGET）</div>
               <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>問題:</strong> ${escapeHtml(event.question || 'クイズ未設定')}</p>
-              <input type="text" id="answer-input-${eventId}" placeholder="4桁の回答を入力">
+              <input type="text" id="answer-input-${eventId}" placeholder="回答を入力">
               <button onclick="submitAnswer('${eventId}')" class="secondary">回答してスタンプを押す</button>
             </div>
           `;
