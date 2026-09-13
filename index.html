@@ -89,6 +89,78 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
+    /* スタンプカード 2x2 グリッド */
+    .stamp-board {
+      background: #fff;
+      border: 2px dashed #bdc3c7;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .stamp-board-title {
+      text-align: center;
+      font-weight: bold;
+      color: var(--primary-color);
+      font-size: 1.1rem;
+      margin-bottom: 14px;
+    }
+
+    .stamp-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .stamp-cell {
+      aspect-ratio: 1;
+      background-color: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      text-align: center;
+      position: relative;
+    }
+
+    .stamp-cell.stamped {
+      background-color: #f0fdf4;
+      border-color: var(--success-color);
+    }
+
+    .stamp-mark {
+      font-size: 2.5rem;
+      line-height: 1;
+      margin-bottom: 4px;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .stamp-empty {
+      font-size: 1.8rem;
+      color: #ccc;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .stamp-event-name {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #555;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
     /* ローディング表示 */
     .loading-container {
       text-align: center;
@@ -239,7 +311,7 @@
       padding: 8px;
     }
 
-    /* 確認用モーダル（ポップアップ） styles */
+    /* モーダル styles */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -253,9 +325,7 @@
       align-items: center;
     }
 
-    .modal-overlay.active {
-      display: flex;
-    }
+    .modal-overlay.active { display: flex; }
 
     .modal-card {
       background: #ffffff;
@@ -286,9 +356,7 @@
       gap: 10px;
     }
 
-    .modal-buttons button {
-      flex: 1;
-    }
+    .modal-buttons button { flex: 1; }
 
     .btn-cancel {
       background-color: #e0e0e0;
@@ -330,8 +398,8 @@
 
   <script>
     // ★設定項目
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec"; 
-    const LIFF_ID = "2011577734-Ymuphm2J"; 
+    const GAS_URL = "YOUR_GAS_WEB_APP_URL"; 
+    const LIFF_ID = "YOUR_LIFF_ID"; 
 
     let currentUser = { userId: "guest", displayName: "ゲスト" };
     let masterEvents = {};
@@ -339,6 +407,27 @@
     let userStamps = [];
     let isAdminMode = false;
     let pendingBookingData = null;
+
+    // 日時文字列から日付のみ（MM/DD）を抽出するヘルパー関数
+    function formatDateOnly(dateStr) {
+      if (!dateStr) return "";
+      
+      // ISO文字列 (例: 2026-10-01T10:30:00.000Z) のパース
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${month}/${day}`;
+      }
+
+      // "09/26 19:30" や "10/01" のようなテキストの場合は時間部分をカット
+      const matched = dateStr.match(/(\d{1,2}\/\d{1,2})/);
+      if (matched) {
+        return matched[1];
+      }
+
+      return dateStr;
+    }
 
     function updateProgress(percent, text) {
       const bar = document.getElementById("progress-bar");
@@ -370,7 +459,6 @@
 
       updateProgress(20, "LINEアカウント認証中...");
       
-      // LINE LIFFの初期化
       try {
         if (LIFF_ID && !LIFF_ID.includes("YOUR_")) {
           await liff.init({ liffId: LIFF_ID });
@@ -379,18 +467,14 @@
             currentUser.userId = profile.userId;
             currentUser.displayName = profile.displayName;
           } else {
-            // LINEアプリ外（ブラウザ）から開いた場合、LINEログインを実行
             liff.login({ redirectUri: window.location.href });
             return;
           }
         } else {
-          console.warn("LIFF_IDが設定されていないため、テストモードで動作します。");
           currentUser.userId = "test_user_01";
           currentUser.displayName = "開発用ユーザー";
         }
       } catch (err) {
-        console.error("LIFF 初期化エラー:", err);
-        // エラー時もテスト動作できるようにフォールバック
         currentUser.userId = "test_user_01";
         currentUser.displayName = "開発用ユーザー";
       }
@@ -473,12 +557,51 @@
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
 
+      // --- スタンプラリーボード (右タブの最上部) の生成 ---
+      const stampBoard = document.createElement("div");
+      stampBoard.className = "stamp-board";
+      
+      let gridCellsHtml = "";
+      for (let i = 0; i < 4; i++) {
+        const eventId = eventKeys[i];
+        if (eventId) {
+          const event = masterEvents[eventId];
+          const isStamped = userStamps.includes(eventId);
+          gridCellsHtml += `
+            <div class="stamp-cell ${isStamped ? 'stamped' : ''}">
+              ${isStamped 
+                ? '<div class="stamp-mark">💮</div>' 
+                : `<div class="stamp-empty">${i + 1}</div>`
+              }
+              <div class="stamp-event-name">${escapeHtml(event.name)}</div>
+            </div>
+          `;
+        } else {
+          gridCellsHtml += `
+            <div class="stamp-cell">
+              <div class="stamp-empty">${i + 1}</div>
+              <div class="stamp-event-name" style="color:#aaa;">Coming Soon</div>
+            </div>
+          `;
+        }
+      }
+
+      stampBoard.innerHTML = `
+        <div class="stamp-board-title">✨ 上映会スタンプラリー ✨</div>
+        <div class="stamp-grid">
+          ${gridCellsHtml}
+        </div>
+      `;
+      stampsContainer.appendChild(stampBoard);
+
+      // --- 各作品の予約・クイズカードの生成 ---
       eventKeys.forEach(eventId => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
-        const bookedDate = userBookings[eventId];
+        const bookedDateRaw = userBookings[eventId];
+        const formattedDateOnly = formatDateOnly(bookedDateRaw);
 
-        // 予約カード
+        // 1. 予約カード
         const bookingCard = document.createElement("div");
         bookingCard.className = "card";
 
@@ -487,23 +610,23 @@
           <div class="section-box">
             <div class="section-title">📅 参加日程の選択</div>
             <div class="booking-status">
-              ${bookedDate ? `現在の予約: <strong>${escapeHtml(bookedDate)}</strong>` : '現在の予約: 未予約'}
+              ${bookedDateRaw ? `現在の予約: <strong>${escapeHtml(formattedDateOnly)}</strong>` : '現在の予約: 未予約'}
             </div>
             <label for="date-select-${eventId}">参加可能日時を選択:</label>
             <select id="date-select-${eventId}">
               ${event.dates.length > 0 
-                ? event.dates.map(d => `<option value="${escapeHtml(d)}" ${d === bookedDate ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')
+                ? event.dates.map(d => `<option value="${escapeHtml(d)}" ${d === bookedDateRaw ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')
                 : '<option value="">日程未定</option>'
               }
             </select>
-            <button onclick="confirmBookingPrompt('${eventId}')">${bookedDate ? '予約日程を変更する' : 'この日程で予約する'}</button>
+            <button onclick="confirmBookingPrompt('${eventId}')">${bookedDateRaw ? '予約日程を変更する' : 'この日程で予約する'}</button>
           </div>
         `;
 
         bookingCard.innerHTML = bookingHtml;
         bookingContainer.appendChild(bookingCard);
 
-        // スタンプカード
+        // 2. クイズ・スタンプカード
         const stampCard = document.createElement("div");
         stampCard.className = "card";
         
@@ -555,7 +678,6 @@
       }
     }
 
-    // 予約ポップアップを表示
     function confirmBookingPrompt(eventId) {
       const selectElem = document.getElementById(`date-select-${eventId}`);
       const selectedDate = selectElem ? selectElem.value : "";
@@ -583,7 +705,6 @@
       pendingBookingData = null;
     }
 
-    // ポップアップの「確定する」ボタンを押したときの送信処理
     async function executeBooking() {
       if (!pendingBookingData) return;
       const { eventId, selectedDate } = pendingBookingData;
