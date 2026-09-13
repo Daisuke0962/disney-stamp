@@ -325,9 +325,9 @@
       }, 500);
 
       try {
-        // ★ タイムアウトを 45秒 (45000ms) に設定
+        // ★ タイムアウトを 60秒 (60000ms) に設定
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
 
         const response = await fetch(`${GAS_URL}?action=GET_STATUS&userId=${encodeURIComponent(currentUser.userId)}`, {
           signal: controller.signal
@@ -357,7 +357,7 @@
         clearInterval(progressTimer);
         console.error("データ取得エラー:", err);
         if (err.name === 'AbortError') {
-          showError("通信がタイムアウト（45秒）しました。", "サーバーからの応答がありませんでした。少し時間をおいて再度お試しいただくか、GASのアクセス設定をご確認ください。");
+          showError("通信がタイムアウト（60秒）しました。", "サーバーからの応答がありませんでした。少し時間をおいて再度お試しいただくか、GASのアクセス設定をご確認ください。");
         } else {
           showError("データの読み込みに失敗しました。", err.message);
         }
