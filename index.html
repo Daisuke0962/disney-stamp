@@ -17,58 +17,88 @@
     .stamp-slot.active { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
     .stamp-mark { font-size: 2.5rem; color: #f59e0b; transform: rotate(-12deg) scale(0); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     @keyframes popIn { to { transform: rotate(-12deg) scale(1); } }
+
+    /* スワイプ用コンテナの設定 */
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .tab-content { width: 100%; flex-shrink: 0; }
   </style>
 </head>
-<body class="min-h-screen pb-12">
+<body class="min-h-screen pb-12 flex flex-col items-center">
 
-  <!-- ヘッダー / ユーザー情報 -->
-  <header class="p-4 max-w-md mx-auto flex justify-between items-center">
-    <div class="flex items-center space-x-3 glass px-4 py-2 rounded-full">
-      <div id="userAvatar" class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-bold">
-        <i class="fas fa-user"></i>
+  <div class="w-full max-w-md flex flex-col min-h-screen">
+    <!-- ヘッダー / ユーザー情報 -->
+    <header class="p-4 flex justify-between items-center w-full">
+      <div class="flex items-center space-x-3 glass px-4 py-2 rounded-full">
+        <div id="userAvatar" class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-sm font-bold">
+          <i class="fas fa-user"></i>
+        </div>
+        <span id="userName" class="text-sm font-medium">ゲストさん</span>
       </div>
-      <span id="userName" class="text-sm font-medium">ゲストさん</span>
-    </div>
-    <button onclick="toggleAdminModal()" class="text-xs text-amber-400 hover:text-amber-300 font-semibold px-3 py-1.5 rounded-lg border border-amber-400/30">
-      編集者画面 🔑
-    </button>
-  </header>
+      <button onclick="toggleAdminModal()" class="text-xs text-amber-400 hover:text-amber-300 font-semibold px-3 py-1.5 rounded-lg border border-amber-400/30">
+        編集者画面 🔑
+      </button>
+    </header>
 
-  <!-- タイトルカード -->
-  <main class="max-w-md mx-auto px-4 space-y-6">
-    <div class="glass p-6 rounded-2xl text-center space-y-2 relative overflow-hidden">
-      <div class="absolute -right-6 -top-6 w-24 h-24 bg-amber-500/10 rounded-full blur-xl"></div>
-      <h1 class="text-xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent">
-        🎬 ディズニー映画会 スタンプラリー
-      </h1>
-      <p class="text-xs text-slate-400">全4回参加でピザ＆スイーツ100円引き券！</p>
-    </div>
-
-    <!-- スタンプカード -->
-    <div class="glass p-5 rounded-2xl space-y-4">
-      <div class="flex justify-between items-center">
-        <h2 class="text-sm font-bold text-slate-300 flex items-center gap-2">
-          <i class="fas fa-stamp text-amber-400"></i> スタンプカード
-        </h2>
-        <span id="stampCount" class="text-xs bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-full font-bold">0 / 4</span>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3" id="stampGrid">
-        <!-- JSで動的生成 -->
+    <!-- タイトルカード -->
+    <div class="px-4 mb-4">
+      <div class="glass p-5 rounded-2xl text-center space-y-1 relative overflow-hidden">
+        <div class="absolute -right-6 -top-6 w-24 h-24 bg-amber-500/10 rounded-full blur-xl"></div>
+        <h1 class="text-lg font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent">
+          🎬 ディズニー映画会 スタンプラリー
+        </h1>
+        <p class="text-xs text-slate-400">全4回参加でピザ＆スイーツ100円引き券！</p>
       </div>
     </div>
 
-    <!-- 上映イベント一覧 -->
-    <div class="space-y-3">
-      <h2 class="text-sm font-bold text-slate-300 px-1 flex items-center gap-2">
-        <i class="fas fa-calendar-alt text-indigo-400"></i> 上映スケジュール ＆ 予約
-      </h2>
-
-      <div id="eventList" class="space-y-3">
-        <!-- JSで動的生成 -->
+    <!-- ゼクシィ風 タブナビゲーション -->
+    <div class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+      <div class="flex relative max-w-md mx-auto">
+        <button id="tabBtn0" onclick="switchTab(0)" class="w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-amber-400 flex items-center justify-center gap-2">
+          <i class="fas fa-stamp"></i> スタンプカード
+        </button>
+        <button id="tabBtn1" onclick="switchTab(1)" class="w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-slate-400 flex items-center justify-center gap-2">
+          <i class="fas fa-calendar-alt"></i> 上映スケジュール
+        </button>
+        <!-- アクティブインジケーター（下線） -->
+        <div id="tabIndicator" class="absolute bottom-0 left-0 w-1/2 h-0.5 bg-amber-400 transition-transform duration-300 ease-in-out"></div>
       </div>
     </div>
-  </main>
+
+    <!-- 横スライド可能なメインコンテンツエリア -->
+    <main class="flex-1 relative overflow-hidden w-full">
+      <div id="tabContainer" class="flex w-full overflow-x-auto snap-x snap-mandatory hide-scrollbar scroll-smooth">
+        
+        <!-- 左タブ：スタンプカード -->
+        <section class="tab-content snap-start px-4 py-4 space-y-4">
+          <div class="glass p-5 rounded-2xl space-y-4">
+            <div class="flex justify-between items-center">
+              <h2 class="text-sm font-bold text-slate-300 flex items-center gap-2">
+                <i class="fas fa-stamp text-amber-400"></i> スタンプ獲得状況
+              </h2>
+              <span id="stampCount" class="text-xs bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-full font-bold">0 / 4</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3" id="stampGrid">
+              <!-- JSで動的生成 -->
+            </div>
+          </div>
+        </section>
+
+        <!-- 右タブ：上映スケジュール＆予約 -->
+        <section class="tab-content snap-start px-4 py-4 space-y-3">
+          <h2 class="text-sm font-bold text-slate-300 px-1 flex items-center gap-2">
+            <i class="fas fa-calendar-alt text-indigo-400"></i> 上映作品 ＆ 予約
+          </h2>
+
+          <div id="eventList" class="space-y-3">
+            <!-- JSで動的生成 -->
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
 
   <!-- モーダル：事前予約 -->
   <div id="bookingModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
@@ -178,6 +208,45 @@
     let userStamps = [];
     let activeTargetEventId = null;
     let tempSelectedDate = null;
+
+    // --- タブ切り替え制御 ---
+    function switchTab(index) {
+      const container = document.getElementById("tabContainer");
+      const indicator = document.getElementById("tabIndicator");
+      const btn0 = document.getElementById("tabBtn0");
+      const btn1 = document.getElementById("tabBtn1");
+
+      const width = container.clientWidth;
+      container.scrollTo({ left: width * index, behavior: 'smooth' });
+
+      updateTabUI(index);
+    }
+
+    function updateTabUI(index) {
+      const indicator = document.getElementById("tabIndicator");
+      const btn0 = document.getElementById("tabBtn0");
+      const btn1 = document.getElementById("tabBtn1");
+
+      indicator.style.transform = `translateX(${index * 100}%)`;
+
+      if (index === 0) {
+        btn0.className = "w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-amber-400 flex items-center justify-center gap-2";
+        btn1.className = "w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-slate-400 flex items-center justify-center gap-2";
+      } else {
+        btn0.className = "w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-slate-400 flex items-center justify-center gap-2";
+        btn1.className = "w-1/2 py-3 text-center text-sm font-bold transition-colors duration-200 text-indigo-400 flex items-center justify-center gap-2";
+      }
+    }
+
+    // スクロール検知でタブ選択状態を自動アップデート（指スワイプ対応）
+    document.addEventListener("DOMContentLoaded", () => {
+      const container = document.getElementById("tabContainer");
+      container.addEventListener("scroll", () => {
+        const width = container.clientWidth;
+        const page = Math.round(container.scrollLeft / width);
+        updateTabUI(page);
+      });
+    });
 
     // --- 日程選択モーダルの補助関数 ---
     function renderDateOptions() {
@@ -302,7 +371,7 @@
             <span class="text-[10px] text-slate-500 absolute top-2 left-2">#0${index + 1}</span>
             ${isStamped 
               ? `<div class="stamp-mark"><i class="fas fa-check-circle"></i></div><span class="text-[10px] text-amber-400 font-bold mt-1">済</span>`
-              : `<i class="fas fa-film text-slate-700 text-2xl"></i><span class="text-[10px] text-slate-500 mt-1">${masterEvents[key].name}</span>`
+              : `<i class="fas fa-film text-slate-700 text-2xl"></i><span class="text-[10px] text-slate-500 mt-1 center text-center px-1">${masterEvents[key].name}</span>`
             }
           </div>
         `;
