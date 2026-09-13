@@ -150,13 +150,16 @@
     }
 
     .stamp-event-name {
-      font-size: 0.75rem;
+      font-size: 0.7rem;          /* 文字サイズをほんの少し小さく調整 */
       font-weight: bold;
       color: #555;
-      max-width: 100%;
+      width: 100%;
+      word-break: break-all;      /* 日本語の途中で綺麗に折り返す */
+      display: -webkit-box;
+      -webkit-line-clamp: 2;      /* 最大2行まで表示 (3行にしたい場合は 3 に変更) */
+      -webkit-box-orient: vertical;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      line-height: 1.2;
     }
 
     @keyframes popIn {
