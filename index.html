@@ -73,11 +73,23 @@
   <!-- モーダル：事前予約 -->
   <div id="bookingModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
     <div class="glass max-w-xs w-full p-5 rounded-2xl space-y-4 text-center">
-      <h3 id="bookingTitle" class="font-bold text-lg text-slate-100">日程を選択して予約</h3>
+      <h3 id="bookingTitle" class="font-bold text-base text-slate-100"></h3>
+      <div id="currentBookingNotice" class="text-xs text-amber-300 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20 hidden"></div>
+      
+      <!-- 日程選択リスト -->
       <div id="dateOptions" class="space-y-2 text-left">
         <!-- 日程ボタンが動的に挿入されます -->
       </div>
-      <button onclick="closeModal('bookingModal')" class="w-full py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs">キャンセル</button>
+
+      <!-- 操作ボタン -->
+      <div class="space-y-2 pt-2 border-t border-slate-700/50">
+        <button id="confirmBookingBtn" onclick="submitBooking()" disabled class="w-full py-2.5 bg-slate-700 text-slate-500 font-bold rounded-xl text-xs transition cursor-not-allowed">
+          日程を選択してください
+        </button>
+        <button onclick="closeModal('bookingModal')" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl text-xs">
+          キャンセル
+        </button>
+      </div>
     </div>
   </div>
 
@@ -143,9 +155,9 @@
   <script>
     // --- 設定項目 ---
     const LIFF_ID = "2011577734-Ymuphm2J";
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec"; // ご自身のWebアプリURLを設定
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQ1gPV_8qG7bpPHRNBJsvPw1VhBCdD1BS80lcA/exec";
 
-    // --- ローカルのフォールバックデータ（Master通信失敗時も表示されるよう保護） ---
+    // --- ローカルのフォールバックデータ ---
     let masterEvents = {
       "alice": {
         name: "① アリス",
@@ -162,9 +174,10 @@
     };
 
     let currentUser = { userId: "guest_" + Math.random().toString(36).substring(2, 9), displayName: "ゲスト" };
-    let userBookings = [];
+    let userBookings = {}; // { eventId: selectedDate }
     let userStamps = [];
     let activeTargetEventId = null;
+    let tempSelectedDate = null; // 一時選択用の変数
 
     // --- LIFF初期化 ---
     window.onload = function() {
@@ -182,7 +195,6 @@
                 syncServer();
               }).catch(() => syncServer());
             } else {
-              // ログインしていない場合はログイン画面に誘導（またはゲスト表示）
               syncServer();
             }
           })
@@ -197,7 +209,6 @@
 
     // --- サーバー（GAS）から状態を取得 ---
     function syncServer() {
-      // 初期描画を最初に行う
       renderApp();
 
       if (!GAS_URL || GAS_URL.includes("YOUR_GAS_WEB_APP_URL")) return;
@@ -209,13 +220,19 @@
           if(data && data.events && Object.keys(data.events).length > 0) {
             masterEvents = data.events;
           }
-          if(data && data.userBookings) userBookings = data.userBookings;
+          if(data && data.userBookings) {
+            if (Array.isArray(data.userBookings)) {
+              data.userBookings.forEach(id => { userBookings[id] = userBookings[id] || "予約済"; });
+            } else {
+              userBookings = data.userBookings;
+            }
+          }
           if(data && data.userStamps) userStamps = data.userStamps;
           renderApp();
           updateAdminSelectOptions();
         })
         .catch(err => {
-          console.error("GASデータ取得失敗（ローカル表示継続）:", err);
+          console.error("GASデータ取得失敗:", err);
           renderApp();
           updateAdminSelectOptions();
         });
@@ -223,9 +240,10 @@
 
     // --- 画面描画 ---
     function renderApp() {
+      const eventKeys = Object.keys(masterEvents);
+
       // 1. スタンプカード
       const stampGrid = document.getElementById("stampGrid");
-      const eventKeys = Object.keys(masterEvents);
       stampGrid.innerHTML = "";
 
       eventKeys.forEach((key, index) => {
@@ -250,7 +268,7 @@
 
       eventKeys.forEach(key => {
         const ev = masterEvents[key];
-        const isBooked = userBookings.includes(key);
+        const isBooked = !!userBookings[key];
         const isStamped = userStamps.includes(key);
 
         const html = `
@@ -258,8 +276,8 @@
             <div class="flex justify-between items-center">
               <h3 class="font-bold text-sm text-slate-100">${ev.name}</h3>
               <div class="flex gap-1">
-                ${isBooked ? `<span class="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">予約済</span>` : ''}
-                ${isStamped ? `<span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">スタンプ済</span>` : ''}
+                ${isBooked ? `<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">✓ 予約済</span>` : ''}
+                ${isStamped ? `<span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">スタンプ済</span>` : ''}
               </div>
             </div>
 
@@ -271,11 +289,11 @@
 
             <!-- アクションボタン -->
             <div class="flex gap-2 pt-1">
-              <button onclick="openBookingModal('${key}')" class="w-1/2 py-2 ${isBooked ? 'bg-slate-800 text-slate-400' : 'bg-indigo-600 hover:bg-indigo-500 text-white'} text-xs font-semibold rounded-xl">
-                ${isBooked ? '日程変更 / 再予約' : '日程を選んで予約'}
+              <button onclick="openBookingModal('${key}')" class="w-1/2 py-2 ${isBooked ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-indigo-600 hover:bg-indigo-500 text-white'} text-xs font-semibold rounded-xl transition">
+                ${isBooked ? '予約日程を変更する' : '日程を選んで予約'}
               </button>
-              <button onclick="openStampModal('${key}')" class="w-1/2 py-2 ${isStamped ? 'bg-slate-800 text-slate-500' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'} text-xs font-bold rounded-xl">
-                ${isStamped ? 'スタンプ取得済み' : 'スタンプを押す 🎯'}
+              <button onclick="openStampModal('${key}')" ${isStamped ? 'disabled' : ''} class="w-1/2 py-2 ${isStamped ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'} text-xs font-bold rounded-xl transition">
+                ${isStamped ? 'スタンプ獲得済み' : 'スタンプを押す 🎯'}
               </button>
             </div>
           </div>
@@ -287,25 +305,71 @@
     // --- モーダル操作 ---
     function openBookingModal(eventId) {
       activeTargetEventId = eventId;
+      tempSelectedDate = null; // 初期化
       const ev = masterEvents[eventId];
       document.getElementById("bookingTitle").textContent = `${ev.name} の予約`;
       
+      const noticeEl = document.getElementById("currentBookingNotice");
+      if (userBookings[eventId] && userBookings[eventId] !== "予約済") {
+        noticeEl.textContent = `現在：${userBookings[eventId]}`;
+        noticeEl.classList.remove("hidden");
+      } else {
+        noticeEl.classList.add("hidden");
+      }
+
+      renderDateOptions();
+      updateConfirmButton();
+      document.getElementById("bookingModal").classList.remove("hidden");
+    }
+
+    // 日程ボタンの動的リスト描画
+    function renderDateOptions() {
+      const ev = masterEvents[activeTargetEventId];
       const container = document.getElementById("dateOptions");
       container.innerHTML = "";
 
       if (!ev.dates || ev.dates.length === 0) {
         container.innerHTML = `<p class="text-xs text-slate-400 text-center">調整中のため選択できる日程がありません</p>`;
-      } else {
-        ev.dates.forEach(dateStr => {
-          container.innerHTML += `
-            <button onclick="submitBooking('${dateStr}')" class="w-full text-left py-2.5 px-4 bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white rounded-xl text-xs font-semibold flex justify-between items-center transition">
-              <span>🗓️ ${dateStr}</span>
-              <i class="fas fa-chevron-right text-[10px]"></i>
-            </button>
-          `;
-        });
+        return;
       }
-      document.getElementById("bookingModal").classList.remove("hidden");
+
+      ev.dates.forEach(dateStr => {
+        const isSelected = tempSelectedDate === dateStr;
+        const isCurrentBooking = userBookings[activeTargetEventId] === dateStr;
+
+        let btnClass = "bg-slate-800 border-transparent text-slate-200";
+        if (isSelected) {
+          btnClass = "bg-indigo-600 border-indigo-400 text-white font-bold ring-2 ring-indigo-400/50";
+        }
+
+        container.innerHTML += `
+          <button onclick="selectDateTemp('${dateStr}')" class="w-full text-left py-2.5 px-4 border rounded-xl text-xs font-semibold flex justify-between items-center transition ${btnClass}">
+            <span>🗓️ ${dateStr} ${isCurrentBooking ? '<span class="text-[10px] text-amber-300 ml-1">(現在の予約)</span>' : ''}</span>
+            ${isSelected ? '<i class="fas fa-check text-amber-300"></i>' : '<i class="far fa-circle text-slate-500"></i>'}
+          </button>
+        `;
+      });
+    }
+
+    // 仮選択処理
+    function selectDateTemp(dateStr) {
+      tempSelectedDate = dateStr;
+      renderDateOptions();
+      updateConfirmButton();
+    }
+
+    // 確定ボタンの状態切り替え
+    function updateConfirmButton() {
+      const btn = document.getElementById("confirmBookingBtn");
+      if (tempSelectedDate) {
+        btn.disabled = false;
+        btn.className = "w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition cursor-pointer";
+        btn.textContent = `「${tempSelectedDate}」で予約確定する`;
+      } else {
+        btn.disabled = true;
+        btn.className = "w-full py-2.5 bg-slate-700 text-slate-500 font-bold rounded-xl text-xs transition cursor-not-allowed";
+        btn.textContent = "日程を選択してください";
+      }
     }
 
     function openStampModal(eventId) {
@@ -320,8 +384,10 @@
       document.getElementById(modalId).classList.add("hidden");
     }
 
-    // --- サーバー送信アクション ---
-    function submitBooking(selectedDate) {
+    // --- サーバー送信アクション（確定時） ---
+    function submitBooking() {
+      if (!tempSelectedDate) return;
+
       fetch(GAS_URL, {
         method: "POST",
         mode: "no-cors",
@@ -331,16 +397,14 @@
           userId: currentUser.userId,
           displayName: currentUser.displayName,
           eventId: activeTargetEventId,
-          detail: selectedDate
+          detail: tempSelectedDate
         })
       });
 
-      if (!userBookings.includes(activeTargetEventId)) {
-        userBookings.push(activeTargetEventId);
-      }
+      userBookings[activeTargetEventId] = tempSelectedDate;
       closeModal("bookingModal");
       renderApp();
-      alert(`「${selectedDate}」で予約を記録しました！`);
+      alert(`「${tempSelectedDate}」で予約を確定しました！`);
     }
 
     function submitQuiz() {
@@ -375,7 +439,6 @@
         }
       })
       .catch(() => {
-        // 通信エラー時も1111判定などで動作補填
         if(answer === "1111") {
           if (!userStamps.includes(activeTargetEventId)) userStamps.push(activeTargetEventId);
           closeModal("stampModal");
