@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>シェアハウス上映会 スタンプラリー</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0f172a; --card: #1e293b; --accent: #f59e0b;
+      --text: #f8fafc; --muted: #94a3b8; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); margin: 0; padding: 16px; display: flex; justify-content: center; }
+    .app { max-width: 420px; width: 100%; }
+
+    /* ナビゲーション */
+    .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: var(--card); padding: 8px 16px; border-radius: 20px; border: 1px solid #334155; }
+    .nav button { background: none; border: none; color: var(--accent); font-size: 0.8rem; cursor: pointer; font-weight: bold; }
+
+    /* カードデザイン */
+    .card { background: var(--card); border-radius: 16px; padding: 20px; border: 1px solid #334155; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+    .title { color: var(--accent); margin: 0 0 6px 0; font-size: 1.2rem; text-align: center; }
+    .subtitle { font-size: 0.8rem; color: var(--muted); text-align: center; margin: 0 0 16px 0; }
+
+    /* グリッドスタンプ */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .stamp-box { background: #0f172a; border: 2px dashed #334155; border-radius: 12px; padding: 12px 8px; text-align: center; }
+    .stamp-box.active { border: 2px solid var(--accent); background: #2e1065; }
+    .stamp-box.expired { opacity: 0.5; border-color: #475569; }
+    .icon { font-size: 2rem; display: block; filter: grayscale(100%) opacity(0.3); }
+    .active .icon { filter: none; transform: scale(1.1); }
+    
+    .btn { background: #334155; color: white; border: none; padding: 8px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; width: 100%; margin-top: 6px; }
+    .btn-accent { background: var(--accent); color: #000; font-weight: bold; }
+    .btn:disabled { background: #475569; cursor: not-allowed; }
+
+    /* ダイレクトエリア */
+    .direct-card { background: #1e1b4b; border: 1px solid #6366f1; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+
+    /* モーダル・管理者 */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); padding: 20px; justify-content: center; align-items: center; }
+    .modal-content { background: var(--card); padding: 20px; border-radius: 12px; width: 100%; max-width: 360px; }
+    input, select { width: 100%; background: #0f172a; color: white; border: 1px solid #334155; padding: 8px; border-radius: 6px; margin: 6px 0 12px 0; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ヘッダーナビ -->
+  <div class="nav">
+    <span id="user-display">👤 LINE連携中...</span>
+    <button onclick="toggleAdmin()">編集者画面 🔑</button>
+  </div>
+
+  <!-- 【ユーザー画面】 -->
+  <div id="user-view">
+    <!-- ダイレクト指定されたイベントエリア（?event=aliceなど） -->
+    <div id="direct-section" class="direct-card" style="display:none;">
+      <h3 id="direct-title" style="margin:0 0 8px 0; color:#c7d2fe; font-size:1rem;"></h3>
+      <div id="direct-action-area"></div>
+    </div>
+
+    <!-- メインスタンプラリーカード -->
+    <div class="card">
+      <h2 class="title">🎬 ディズニー映画会 スタンプラリー</h2>
+      <p class="subtitle">全4回参加でピザ＆スイーツ100円引き券！</p>
+      
+      <div class="grid" id="stamp-grid">
+        <!-- JSで動的生成 -->
+      </div>
+
+      <div id="coupon-area" style="display:none; text-align:center; padding:12px; background:#065f46; border-radius:8px; margin-top:12px;">
+        🎉 <b>全通コンプリート！</b><br>100円引きクーポン獲得！
+      </div>
+    </div>
+
+    <!-- 1タップ感情チェック -->
+    <div id="reaction-section" class="card" style="display:none; text-align:center;">
+      <p style="font-size:0.85rem; margin-bottom:8px;">✨ 鑑賞後の気分は？（1タップ）</p>
+      <div style="display:flex; justify-content:space-around; font-size:1.8rem;">
+        <span style="cursor:pointer;" onclick="sendReaction('🤯 衝撃的！')">🤯</span>
+        <span style="cursor:pointer;" onclick="sendReaction('😭 号泣')">😭</span>
+        <span style="cursor:pointer;" onclick="sendReaction('✨ 世界観最高')">✨</span>
+        <span style="cursor:pointer;" onclick="sendReaction('☕️ お茶が旨い')">☕️</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 【編集者（管理者）画面】 -->
+  <div id="admin-view" style="display:none;" class="card">
+    <h3 class="title">🔑 編集者管理画面</h3>
+    
+    <!-- ダッシュボード -->
+    <div style="background:#0f172a; padding:12px; border-radius:8px; margin-bottom:16px; font-size:0.85rem;">
+      📊 <b>リアルタイム集計</b><br>
+      ・総予約数: <span id="db-bookings">-</span>件<br>
+      ・総実出席数: <span id="db-stamps">-</span>件<br>
+      ・コンプリート達成者: <span id="db-completers">-</span>名
+    </div>
+
+    <!-- 秘密の質問書き換え -->
+    <h4>⚙️ 秘密の質問・正解の更新</h4>
+    <select id="adm-event-select">
+      <option value="alice">① アリス</option>
+      <option value="tron">② トロン</option>
+    </select>
+    <input type="text" id="adm-q" placeholder="新しい質問文">
+    <input type="text" id="adm-a" placeholder="新しい正解コード（例: 1111）">
+    <button class="btn btn-accent" onclick="updateQuestion()">質問＆正解を保存</button>
+
+    <hr style="border-color:#334155; margin:16px 0;">
+
+    <!-- 手動スタンプ付与 -->
+    <h4>✋ 手動スタンプ付与（補正）</h4>
+    <input type="text" id="adm-target-user" placeholder="対象のLINE表示名">
+    <button class="btn" onclick="manualStamp()">手動でスタンプを強製付与</button>
+
+    <hr style="border-color:#334155; margin:16px 0;">
+
+    <button class="btn" onclick="window.open(SPREADSHEET_URL, '_blank')">📑 スプレッドシートを直接開く</button>
+    <button class="btn" style="margin-top:8px;" onclick="location.reload()">ユーザー画面に戻る</button>
+  </div>
+</div>
+
+<!-- ログイン用モーダル -->
+<div id="login-modal" class="modal">
+  <div class="modal-content">
+    <h3 style="margin-top:0;">管理者ログイン</h3>
+    <input type="text" id="login-id" placeholder="ID">
+    <input type="password" id="login-pw" placeholder="パスワード">
+    <button class="btn btn-accent" onclick="authAdmin()">ログイン</button>
+  </div>
+</div>
+
+<script>
+  // ================= ⚙️ 設定（書き換えてください） =================
+  const MY_LIFF_ID = "2011577734-Ymuphm2J";
+  const GAS_URL = "YOUR_GAS_URL";
+  const SPREADSHEET_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec";
+  const ADMIN_ID = "kato0303";
+  const ADMIN_PW = "kato0303";
+  // =================================================================
+
+  let currentUser = { userId: "guest_" + Math.random(), displayName: "ゲスト" };
+  let masterEvents = {};
+  let userBookings = [];
+  let userStamps = [];
+  let targetEventParam = new URLSearchParams(window.location.search).get('event');
+
+  const icons = { alice: "🫖", tron: "⚡️", pirates: "🏴‍☠️", nightmare: "🎃" };
+
+  window.onload = function() {
+    liff.init({ liffId: MY_LIFF_ID }).then(() => {
+      if (liff.isLoggedIn()) {
+        liff.getProfile().then(p => {
+          currentUser.userId = p.userId;
+          currentUser.displayName = p.displayName;
+          document.getElementById('user-display').innerText = "👤 " + p.displayName;
+          syncServer();
+        });
+      } else {
+        liff.login();
+      }
+    }).catch(() => {
+      document.getElementById('user-display').innerText = "👤 ゲスト(テスト)";
+      syncServer();
+    });
+  };
+
+  // 1. サーバー（GAS）から同期取得
+  function syncServer() {
+    fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "GET_STATUS", userId: currentUser.userId })
+    }).then(res => res.json()).then(data => {
+      masterEvents = data.events;
+      userBookings = data.userBookings;
+      userStamps = data.userStamps;
+      renderApp();
+    });
+  }
+
+  // 2. 画面レンダリング
+  function renderApp() {
+    const grid = document.getElementById('stamp-grid');
+    grid.innerHTML = "";
+    const today = new Date().toISOString().split('T')[0];
+
+    Object.keys(masterEvents).forEach(id => {
+      const ev = masterEvents[id];
+      const isStamped = userStamps.includes(id);
+      const isExpired = ev.date < today && !isStamped;
+
+      const box = document.createElement('div');
+      box.className = `stamp-box ${isStamped ? 'active' : ''} ${isExpired ? 'expired' : ''}`;
+      box.innerHTML = `
+        <span class="icon">${icons[id] || '🎬'}</span>
+        <div style="font-size:0.8rem; font-weight:bold;">${ev.name}</div>
+        <button class="btn ${isStamped ? 'btn-accent' : ''}" 
+          ${isExpired || isStamped ? 'disabled' : ''} 
+          onclick="triggerAnswer('${id}')">
+          ${isStamped ? 'GET!' : (isExpired ? '受付終了' : 'スタンプ獲得')}
+        </button>
+      `;
+      grid.appendChild(box);
+    });
+
+    // ダイレクトパラメータ（?event=alice）処理
+    if (targetEventParam && masterEvents[targetEventParam]) {
+      const ev = masterEvents[targetEventParam];
+      const isBooked = userBookings.includes(targetEventParam);
+      const isStamped = userStamps.includes(targetEventParam);
+
+      document.getElementById('direct-section').style.display = 'block';
+      document.getElementById('direct-title').innerText = `📅 ${ev.name} 予約・参加ページ`;
+      
+      let html = "";
+      if (!isBooked) {
+        html += `<button class="btn btn-accent" onclick="submitBooking('${targetEventParam}')">1タップで参加予約する 📩</button>`;
+      } else {
+        html += `<p style="font-size:0.8rem; color:#818cf8; margin:0 0 8px 0;">✅ 参加予約済みです！</p>`;
+      }
+
+      if (!isStamped) {
+        html += `<button class="btn" style="margin-top:8px;" onclick="triggerAnswer('${targetEventParam}')">当日の秘密の質問に答える 🔐</button>`;
+      }
+      document.getElementById('direct-action-area').innerHTML = html;
+    }
+
+    // クーポン表示
+    if (userStamps.length >= 4) {
+      document.getElementById('coupon-area').style.display = 'block';
+    }
+  }
+
+  // 3. 事前予約アクション
+  function submitBooking(eventId) {
+    fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "BOOKING",
+        displayName: currentUser.displayName,
+        userId: currentUser.userId,
+        eventId: eventId,
+        detail: "事前予約完了"
+      })
+    }).then(() => {
+      alert("参加予約を受け付けました！✨");
+      syncServer();
+    });
+  }
+
+  // 4. 秘密の質問 ＆ スタンプGET
+  function triggerAnswer(eventId) {
+    const ev = masterEvents[eventId];
+    const ans = prompt(`【${ev.name}】の秘密の質問:\n\n${ev.question}`);
+    if (!ans) return;
+
+    fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "CHECK_STAMP",
+        displayName: currentUser.displayName,
+        userId: currentUser.userId,
+        eventId: eventId,
+        answer: ans
+      })
+    }).then(res => res.json()).then(res => {
+      if (res.status === "OK") {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        alert("🎉 正解！スタンプを獲得しました！");
+        document.getElementById('reaction-section').style.display = 'block';
+        syncServer();
+      } else {
+        alert(res.message);
+      }
+    });
+  }
+
+  // 5. 感情リアクション
+  function sendReaction(emotion) {
+    fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "REACTION",
+        displayName: currentUser.displayName,
+        userId: currentUser.userId,
+        eventId: targetEventParam || "general",
+        detail: emotion
+      })
+    }).then(() => {
+      alert("リアクションありがとうございます！✨");
+      document.getElementById('reaction-section').style.display = 'none';
+    });
+  }
+
+  // 6. 管理者切り替え・ログイン
+  function toggleAdmin() {
+    document.getElementById('login-modal').style.display = 'flex';
+  }
+
+  function authAdmin() {
+    const id = document.getElementById('login-id').value;
+    const pw = document.getElementById('login-pw').value;
+    if (id === ADMIN_ID && pw === ADMIN_PW) {
+      document.getElementById('login-modal').style.display = 'none';
+      document.getElementById('user-view').style.display = 'none';
+      document.getElementById('admin-view').style.display = 'block';
+      loadDashboard();
+    } else {
+      alert("IDまたはパスワードが違います");
+    }
+  }
+
+  function loadDashboard() {
+    fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "GET_DASHBOARD" })
+    }).then(res => res.json()).then(data => {
+      document.getElementById('db-bookings').innerText = data.totalBookings;
+      document.getElementById('db-stamps').innerText = data.totalStamps;
+      document.getElementById('db-completers').innerText = data.completers;
+    });
+  }
+
+  function updateQuestion() {
+    const eventId = document.getElementById('adm-event-select').value;
+    const q = document.getElementById('adm-q').value;
+    const a = document.getElementById('adm-a').value;
+    fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "UPDATE_QUESTION", eventId: eventId, question: q, answer: a })
+    }).then(() => alert("質問と正解を更新しました！"));
+  }
+
+  function manualStamp() {
+    const targetName = document.getElementById('adm-target-user').value;
+    const eventId = document.getElementById('adm-event-select').value;
+    fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "MANUAL_STAMP", targetName: targetName, eventId: eventId })
+    }).then(() => alert(`${targetName}様に手動でスタンプを付与しました！`));
+  }
+</script>
+</body>
+</html>
