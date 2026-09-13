@@ -109,8 +109,10 @@
 
     .stamp-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr)); /* ← ここを minmax(0, 1fr) に変更！ */
       gap: 12px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .stamp-cell {
