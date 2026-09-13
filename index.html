@@ -174,10 +174,59 @@
     };
 
     let currentUser = { userId: "guest_" + Math.random().toString(36).substring(2, 9), displayName: "ゲスト" };
-    let userBookings = {}; // { eventId: selectedDate }
+    let userBookings = {}; 
     let userStamps = [];
     let activeTargetEventId = null;
-    let tempSelectedDate = null; // 一時選択用の変数
+    let tempSelectedDate = null;
+
+    // --- 日程選択モーダルの補助関数 ---
+    function renderDateOptions() {
+      if (!activeTargetEventId || !masterEvents[activeTargetEventId]) return;
+      const ev = masterEvents[activeTargetEventId];
+      const container = document.getElementById("dateOptions");
+      container.innerHTML = "";
+
+      if (!ev.dates || ev.dates.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-400 text-center">調整中のため選択できる日程がありません</p>`;
+        return;
+      }
+
+      ev.dates.forEach(dateStr => {
+        const isSelected = tempSelectedDate === dateStr;
+        const isCurrentBooking = userBookings[activeTargetEventId] === dateStr;
+
+        let btnClass = "bg-slate-800 border-transparent text-slate-200";
+        if (isSelected) {
+          btnClass = "bg-indigo-600 border-indigo-400 text-white font-bold ring-2 ring-indigo-400/50";
+        }
+
+        container.innerHTML += `
+          <button onclick="selectDateTemp('${dateStr}')" class="w-full text-left py-2.5 px-4 border rounded-xl text-xs font-semibold flex justify-between items-center transition ${btnClass}">
+            <span>🗓️ ${dateStr} ${isCurrentBooking ? '<span class="text-[10px] text-amber-300 ml-1">(現在の予約)</span>' : ''}</span>
+            ${isSelected ? '<i class="fas fa-check text-amber-300"></i>' : '<i class="far fa-circle text-slate-500"></i>'}
+          </button>
+        `;
+      });
+    }
+
+    function selectDateTemp(dateStr) {
+      tempSelectedDate = dateStr;
+      renderDateOptions();
+      updateConfirmButton();
+    }
+
+    function updateConfirmButton() {
+      const btn = document.getElementById("confirmBookingBtn");
+      if (tempSelectedDate) {
+        btn.disabled = false;
+        btn.className = "w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition cursor-pointer";
+        btn.textContent = `「${tempSelectedDate}」で予約確定する`;
+      } else {
+        btn.disabled = true;
+        btn.className = "w-full py-2.5 bg-slate-700 text-slate-500 font-bold rounded-xl text-xs transition cursor-not-allowed";
+        btn.textContent = "日程を選択してください";
+      }
+    }
 
     // --- LIFF初期化 ---
     window.onload = function() {
@@ -305,7 +354,7 @@
     // --- モーダル操作 ---
     function openBookingModal(eventId) {
       activeTargetEventId = eventId;
-      tempSelectedDate = null; // 初期化
+      tempSelectedDate = null;
       const ev = masterEvents[eventId];
       document.getElementById("bookingTitle").textContent = `${ev.name} の予約`;
       
@@ -320,56 +369,6 @@
       renderDateOptions();
       updateConfirmButton();
       document.getElementById("bookingModal").classList.remove("hidden");
-    }
-
-    // 日程ボタンの動的リスト描画
-    function renderDateOptions() {
-      const ev = masterEvents[activeTargetEventId];
-      const container = document.getElementById("dateOptions");
-      container.innerHTML = "";
-
-      if (!ev.dates || ev.dates.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 text-center">調整中のため選択できる日程がありません</p>`;
-        return;
-      }
-
-      ev.dates.forEach(dateStr => {
-        const isSelected = tempSelectedDate === dateStr;
-        const isCurrentBooking = userBookings[activeTargetEventId] === dateStr;
-
-        let btnClass = "bg-slate-800 border-transparent text-slate-200";
-        if (isSelected) {
-          btnClass = "bg-indigo-600 border-indigo-400 text-white font-bold ring-2 ring-indigo-400/50";
-        }
-
-        container.innerHTML += `
-          <button onclick="selectDateTemp('${dateStr}')" class="w-full text-left py-2.5 px-4 border rounded-xl text-xs font-semibold flex justify-between items-center transition ${btnClass}">
-            <span>🗓️ ${dateStr} ${isCurrentBooking ? '<span class="text-[10px] text-amber-300 ml-1">(現在の予約)</span>' : ''}</span>
-            ${isSelected ? '<i class="fas fa-check text-amber-300"></i>' : '<i class="far fa-circle text-slate-500"></i>'}
-          </button>
-        `;
-      });
-    }
-
-    // 仮選択処理
-    function selectDateTemp(dateStr) {
-      tempSelectedDate = dateStr;
-      renderDateOptions();
-      updateConfirmButton();
-    }
-
-    // 確定ボタンの状態切り替え
-    function updateConfirmButton() {
-      const btn = document.getElementById("confirmBookingBtn");
-      if (tempSelectedDate) {
-        btn.disabled = false;
-        btn.className = "w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition cursor-pointer";
-        btn.textContent = `「${tempSelectedDate}」で予約確定する`;
-      } else {
-        btn.disabled = true;
-        btn.className = "w-full py-2.5 bg-slate-700 text-slate-500 font-bold rounded-xl text-xs transition cursor-not-allowed";
-        btn.textContent = "日程を選択してください";
-      }
     }
 
     function openStampModal(eventId) {
