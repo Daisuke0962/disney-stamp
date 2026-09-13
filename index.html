@@ -58,7 +58,7 @@
       display: inline-block;
     }
 
-    /* タブ切り替えUI */
+    /* タブUI */
     .tab-nav {
       display: flex;
       background: #e0e6ed;
@@ -86,13 +86,8 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
     /* ローディング表示 */
     .loading-container {
@@ -136,7 +131,7 @@
       word-break: break-all;
     }
 
-    /* カード・パーツ各種 */
+    /* カード各種 */
     .card {
       background: var(--card-bg);
       border-radius: 12px;
@@ -244,12 +239,60 @@
       padding: 8px;
     }
 
-    .admin-panel {
-      background-color: #fff3cd;
-      border: 1px solid #ffeeba;
-      padding: 14px;
-      border-radius: 8px;
-      margin-top: 16px;
+    /* 確認用モーダル（ポップアップ） styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      width: 85%;
+      max-width: 400px;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 12px;
+      color: var(--primary-color);
+    }
+
+    .modal-body {
+      font-size: 0.95rem;
+      color: #444;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal-buttons button {
+      flex: 1;
+    }
+
+    .btn-cancel {
+      background-color: #e0e0e0;
+      color: #333;
     }
   </style>
 </head>
@@ -261,7 +304,6 @@
       <div id="user-display" class="user-info">ユーザー情報を確認中...</div>
     </div>
 
-    <!-- メインコンテンツ表示エリア -->
     <div id="content">
       <div class="loading-container">
         <div id="status-text" class="status-text">アプリを初期化中...</div>
@@ -274,16 +316,29 @@
     </div>
   </div>
 
+  <!-- 予約確認モーダル -->
+  <div id="confirm-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-title">予約内容の確認</div>
+      <div id="modal-body-text" class="modal-body"></div>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+        <button id="modal-confirm-btn">確定する</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ★設定項目
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec"; 
-    const LIFF_ID = "2011577734-Ymuphm2J"; 
+    const GAS_URL = "YOUR_GAS_WEB_APP_URL"; 
+    const LIFF_ID = "YOUR_LIFF_ID"; 
 
     let currentUser = { userId: "guest", displayName: "ゲスト" };
     let masterEvents = {};
     let userBookings = {};
     let userStamps = [];
     let isAdminMode = false;
+    let pendingBookingData = null;
 
     function updateProgress(percent, text) {
       const bar = document.getElementById("progress-bar");
@@ -314,6 +369,8 @@
       isAdminMode = urlParams.get('mode') === 'admin';
 
       updateProgress(20, "LINEアカウント認証中...");
+      
+      // LINE LIFFの初期化
       try {
         if (LIFF_ID && !LIFF_ID.includes("YOUR_")) {
           await liff.init({ liffId: LIFF_ID });
@@ -322,14 +379,18 @@
             currentUser.userId = profile.userId;
             currentUser.displayName = profile.displayName;
           } else {
-            liff.login();
+            // LINEアプリ外（ブラウザ）から開いた場合、LINEログインを実行
+            liff.login({ redirectUri: window.location.href });
             return;
           }
         } else {
+          console.warn("LIFF_IDが設定されていないため、テストモードで動作します。");
           currentUser.userId = "test_user_01";
           currentUser.displayName = "開発用ユーザー";
         }
       } catch (err) {
+        console.error("LIFF 初期化エラー:", err);
+        // エラー時もテスト動作できるようにフォールバック
         currentUser.userId = "test_user_01";
         currentUser.displayName = "開発用ユーザー";
       }
@@ -390,7 +451,6 @@
       }
     }
 
-    // メインUI（タブ切り替え構造）の描画
     function renderApp() {
       const container = document.getElementById("content");
       
@@ -400,17 +460,13 @@
         return;
       }
 
-      // タブの骨組み（左: 上映予約・日程 [デフォルト] / 右: スタンプカード）
       container.innerHTML = `
         <div class="tab-nav">
           <button id="btn-tab-booking" class="tab-btn active" onclick="switchTab('booking')">📅 上映予約・日程</button>
           <button id="btn-tab-stamps" class="tab-btn" onclick="switchTab('stamps')">🎟️ スタンプカード</button>
         </div>
 
-        <!-- 左タブ: 上映予約 ＆ スケジュール (デフォルト表示) -->
         <div id="tab-booking" class="tab-content active"></div>
-
-        <!-- 右タブ: スタンプ ＆ リアクション ＆ クイズ -->
         <div id="tab-stamps" class="tab-content"></div>
       `;
 
@@ -422,7 +478,7 @@
         const isStamped = userStamps.includes(eventId);
         const bookedDate = userBookings[eventId];
 
-        // --- 1. 予約タブ用のカード (左) ---
+        // 予約カード
         const bookingCard = document.createElement("div");
         bookingCard.className = "card";
 
@@ -440,14 +496,14 @@
                 : '<option value="">日程未定</option>'
               }
             </select>
-            <button onclick="submitBooking('${eventId}')">${bookedDate ? '予約日程を変更する' : 'この日程で予約する'}</button>
+            <button onclick="confirmBookingPrompt('${eventId}')">${bookedDate ? '予約日程を変更する' : 'この日程で予約する'}</button>
           </div>
         `;
 
         bookingCard.innerHTML = bookingHtml;
         bookingContainer.appendChild(bookingCard);
 
-        // --- 2. スタンプタブ用のカード (右) ---
+        // スタンプカード
         const stampCard = document.createElement("div");
         stampCard.className = "card";
         
@@ -463,7 +519,7 @@
             <div class="section-box">
               <div class="section-title">💡 当日クイズ（正解でスタンプGET）</div>
               <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>問題:</strong> ${escapeHtml(event.question || 'クイズ未設定')}</p>
-              <input type="text" id="answer-input-${eventId}" placeholder="4桁の回答を入力">
+              <input type="text" id="answer-input-${eventId}" placeholder="回答を入力">
               <button onclick="submitAnswer('${eventId}')" class="secondary">回答してスタンプを押す</button>
             </div>
           `;
@@ -481,25 +537,11 @@
           </div>
         `;
 
-        if (isAdminMode) {
-          stampHtml += `
-            <div class="admin-panel">
-              <h4 style="margin:0 0 10px 0; color:#856404;">【管理者機能】クイズ・回答の変更</h4>
-              <label>問題文:</label>
-              <input type="text" id="admin-q-${eventId}" value="${escapeHtml(event.question || '')}">
-              <label>正解 (数字4桁):</label>
-              <input type="text" id="admin-a-${eventId}" value="${escapeHtml(event.answer || '')}">
-              <button onclick="updateQuestion('${eventId}')" style="background-color: #d35400;">マスターデータを更新</button>
-            </div>
-          `;
-        }
-
         stampCard.innerHTML = stampHtml;
         stampsContainer.appendChild(stampCard);
       });
     }
 
-    // タブ切り替え関数
     function switchTab(tabName) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -513,7 +555,8 @@
       }
     }
 
-    async function submitBooking(eventId) {
+    // 予約ポップアップを表示
+    function confirmBookingPrompt(eventId) {
       const selectElem = document.getElementById(`date-select-${eventId}`);
       const selectedDate = selectElem ? selectElem.value : "";
       
@@ -521,6 +564,30 @@
         alert("予約する日程を選択してください。");
         return;
       }
+
+      const eventName = masterEvents[eventId].name;
+      pendingBookingData = { eventId, selectedDate };
+
+      document.getElementById("modal-body-text").innerHTML = `
+        <strong>「${escapeHtml(eventName)}」</strong><br>
+        日時：<strong>${escapeHtml(selectedDate)}</strong><br><br>
+        この日程で予約を確定しますか？
+      `;
+
+      document.getElementById("modal-confirm-btn").onclick = executeBooking;
+      document.getElementById("confirm-modal").classList.add("active");
+    }
+
+    function closeModal() {
+      document.getElementById("confirm-modal").classList.remove("active");
+      pendingBookingData = null;
+    }
+
+    // ポップアップの「確定する」ボタンを押したときの送信処理
+    async function executeBooking() {
+      if (!pendingBookingData) return;
+      const { eventId, selectedDate } = pendingBookingData;
+      closeModal();
 
       const payload = {
         action: "BOOKING",
@@ -569,22 +636,6 @@
       };
       await sendPost(payload);
       alert(`リアクション ${reaction} を送信しました！`);
-    }
-
-    async function updateQuestion(eventId) {
-      const newQuestion = document.getElementById(`admin-q-${eventId}`).value;
-      const newAnswer = document.getElementById(`admin-a-${eventId}`).value;
-
-      const payload = {
-        action: "UPDATE_QUESTION",
-        eventId: eventId,
-        question: newQuestion,
-        answer: newAnswer
-      };
-
-      await sendPost(payload);
-      alert("クイズと回答の更新が完了しました。");
-      await loadStatus();
     }
 
     async function sendPost(payload) {
