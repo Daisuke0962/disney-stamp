@@ -41,7 +41,7 @@
     .direct-card { background: #1e1b4b; border: 1px solid #6366f1; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
 
     /* モーダル・管理者 */
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); padding: 20px; justify-content: center; align-items: center; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); padding: 20px; justify-content: center; align-items: center; z-index: 100; }
     .modal-content { background: var(--card); padding: 20px; border-radius: 12px; width: 100%; max-width: 360px; }
     input, select { width: 100%; background: #0f172a; color: white; border: 1px solid #334155; padding: 8px; border-radius: 6px; margin: 6px 0 12px 0; }
   </style>
@@ -103,9 +103,9 @@
 
     <!-- 秘密の質問書き換え -->
     <h4>⚙️ 秘密の質問・正解の更新</h4>
+    <label style="font-size:0.8rem; color:var(--muted);">対象のイベントを選択:</label>
     <select id="adm-event-select">
-      <option value="alice">① アリス</option>
-      <option value="tron">② トロン</option>
+      <!-- Masterシートから動的に自動生成されます -->
     </select>
     <input type="text" id="adm-q" placeholder="新しい質問文">
     <input type="text" id="adm-a" placeholder="新しい正解コード（例: 1111）">
@@ -116,7 +116,7 @@
     <!-- 手動スタンプ付与 -->
     <h4>✋ 手動スタンプ付与（補正）</h4>
     <input type="text" id="adm-target-user" placeholder="対象のLINE表示名">
-    <button class="btn" onclick="manualStamp()">手動でスタンプを強製付与</button>
+    <button class="btn" onclick="manualStamp()">手動でスタンプを強制付与</button>
 
     <hr style="border-color:#334155; margin:16px 0;">
 
@@ -138,8 +138,8 @@
 <script>
   // ================= ⚙️ 設定（書き換えてください） =================
   const MY_LIFF_ID = "2011577734-Ymuphm2J";
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec";
-  const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/17xCL9h2Y2ZH3P4j0Hp7OSv5Ji9o7PgX0LbQVJ5qPVKs/edit?gid=0#gid=0";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQ1gPV_8qG7bpPHRNBJsvPw1VhBCdD1BS80lcA/exec";
+  const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit";
   const ADMIN_ID = "kato0303";
   const ADMIN_PW = "kato0303";
   // =================================================================
@@ -150,7 +150,7 @@
   let userStamps = [];
   let targetEventParam = new URLSearchParams(window.location.search).get('event');
 
-  const icons = { alice: "🫖", tron: "⚡️", pirates: "🏴‍☠️", nightmare: "🎃" };
+  const defaultIcons = ["🎬", "☕️", "✨", "🍿", "🍕", "🎉"];
 
   window.onload = function() {
     liff.init({ liffId: MY_LIFF_ID }).then(() => {
@@ -165,7 +165,7 @@
         liff.login();
       }
     }).catch(() => {
-      document.getElementById('user-display').innerText = "👤 ゲスト(テスト)";
+      document.getElementById('user-display').innerText = "👤 Daisuke Kato (テスト)";
       syncServer();
     });
   };
@@ -180,6 +180,7 @@
       userBookings = data.userBookings;
       userStamps = data.userStamps;
       renderApp();
+      updateAdminSelectOptions(); // 管理画面のセレクトボックスも動的更新
     });
   }
 
@@ -187,28 +188,28 @@
   function renderApp() {
     const grid = document.getElementById('stamp-grid');
     grid.innerHTML = "";
-    const today = new Date().toISOString().split('T')[0];
 
-    Object.keys(masterEvents).forEach(id => {
+    const keys = Object.keys(masterEvents);
+    keys.forEach((id, index) => {
       const ev = masterEvents[id];
       const isStamped = userStamps.includes(id);
-      const isExpired = ev.date < today && !isStamped;
+      const icon = defaultIcons[index % defaultIcons.length];
 
       const box = document.createElement('div');
-      box.className = `stamp-box ${isStamped ? 'active' : ''} ${isExpired ? 'expired' : ''}`;
+      box.className = `stamp-box ${isStamped ? 'active' : ''}`;
       box.innerHTML = `
-        <span class="icon">${icons[id] || '🎬'}</span>
+        <span class="icon">${icon}</span>
         <div style="font-size:0.8rem; font-weight:bold;">${ev.name}</div>
         <button class="btn ${isStamped ? 'btn-accent' : ''}" 
-          ${isExpired || isStamped ? 'disabled' : ''} 
+          ${isStamped ? 'disabled' : ''} 
           onclick="triggerAnswer('${id}')">
-          ${isStamped ? 'GET!' : (isExpired ? '受付終了' : 'スタンプ獲得')}
+          ${isStamped ? 'GET!' : 'スタンプ獲得'}
         </button>
       `;
       grid.appendChild(box);
     });
 
-    // ダイレクトパラメータ（?event=alice）処理
+    // ダイレクトパラメータ（?event=alice等）処理
     if (targetEventParam && masterEvents[targetEventParam]) {
       const ev = masterEvents[targetEventParam];
       const isBooked = userBookings.includes(targetEventParam);
@@ -219,7 +220,7 @@
       
       let html = "";
       if (!isBooked) {
-        html += `<button class="btn btn-accent" onclick="submitBooking('${targetEventParam}')">1タップで参加予約する 📩</button>`;
+        html += `<button class="btn btn-accent" onclick="openBookingModal('${targetEventParam}')">希望日程を選んで予約する 📩</button>`;
       } else {
         html += `<p style="font-size:0.8rem; color:#818cf8; margin:0 0 8px 0;">✅ 参加予約済みです！</p>`;
       }
@@ -231,13 +232,49 @@
     }
 
     // クーポン表示
-    if (userStamps.length >= 4) {
+    if (userStamps.length >= keys.length && keys.length > 0) {
       document.getElementById('coupon-area').style.display = 'block';
     }
   }
 
-  // 3. 事前予約アクション
-  function submitBooking(eventId) {
+  // 管理者画面のイベント選択ドロップダウンを動的更新
+  function updateAdminSelectOptions() {
+    const select = document.getElementById('adm-event-select');
+    select.innerHTML = "";
+    Object.keys(masterEvents).forEach(id => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.innerText = `${masterEvents[id].name} (ID: ${id})`;
+      select.appendChild(opt);
+    });
+  }
+
+  // 3. 事前予約
+  function openBookingModal(eventId) {
+    const ev = masterEvents[eventId];
+    if (!ev || !ev.dates || ev.dates.length === 0) {
+      alert("現在、有効な開催日程が設定されていません。");
+      return;
+    }
+
+    const dates = ev.dates;
+    let selectMessage = `【${ev.name}】の希望日程を選んでください:\n\n`;
+    dates.forEach((d, index) => {
+      selectMessage += `${index + 1}. ${d}\n`;
+    });
+    selectMessage += `\n半角数字（1〜${dates.length}）で入力してください:`;
+
+    const choice = prompt(selectMessage, "1");
+    if (!choice) return;
+
+    const selectedIndex = parseInt(choice) - 1;
+    if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= dates.length) {
+      alert("正しい番号を選択してください。");
+      return;
+    }
+
+    const selectedDate = dates[selectedIndex];
+
     fetch(GAS_URL, {
       method: "POST",
       body: JSON.stringify({
@@ -245,10 +282,10 @@
         displayName: currentUser.displayName,
         userId: currentUser.userId,
         eventId: eventId,
-        detail: "事前予約完了"
+        detail: `予約日程: ${selectedDate}`
       })
     }).then(() => {
-      alert("参加予約を受け付けました！✨");
+      alert(`「${selectedDate}」で参加予約を受け付けました！✨`);
       syncServer();
     });
   }
@@ -297,7 +334,7 @@
     });
   }
 
-  // 6. 管理者切り替え・ログイン
+  // 6. 管理者機能
   function toggleAdmin() {
     document.getElementById('login-modal').style.display = 'flex';
   }
