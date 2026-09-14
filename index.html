@@ -713,20 +713,28 @@
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
 
-      // --- スタンプラリーボードの生成 (最大4つ) ---
+      // --- スタンプラリーボードの生成 (「受付中」および「今後開催」のみを表示対象とする / 最大4つ) ---
+      const activeOrUpcomingKeysForBoard = validEventKeys.filter(eventId => {
+        const status = masterEvents[eventId].status;
+        return status !== "開催終了";
+      });
+
       const stampBoard = document.createElement("div");
       stampBoard.className = "stamp-board";
       
       let gridCellsHtml = "";
       for (let i = 0; i < 4; i++) {
-        const eventId = validEventKeys[i];
+        const eventId = activeOrUpcomingKeysForBoard[i];
         if (eventId) {
           const event = masterEvents[eventId];
           const isStamped = userStamps.includes(eventId);
+          // スプレッドシートから届く stampIcon（作品カスタム絵文字）を適用。未設定時は '🎬'
+          const stampIcon = event.stampIcon || '🎬';
+
           gridCellsHtml += `
             <div class="stamp-cell ${isStamped ? 'stamped' : ''}">
               ${isStamped 
-                ? '<div class="stamp-mark">💮</div>' 
+                ? `<div class="stamp-mark">${escapeHtml(stampIcon)}</div>` 
                 : `<div class="stamp-empty">${i + 1}</div>`
               }
               <div class="stamp-event-name">${escapeHtml(event.name)}</div>
@@ -759,7 +767,7 @@
 
       const activeOrUpcomingKeys = validEventKeys.filter(eventId => {
         const status = masterEvents[eventId].status;
-        return status !== "開催終了"; // 「受付中」「今後開催」、あるいは未指定のものはここへ
+        return status !== "開催終了";
       });
 
       if (activeOrUpcomingKeys.length === 0) {
@@ -799,6 +807,7 @@
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
         const status = event.status || "受付中";
+        const stampIcon = event.stampIcon || '🎬';
 
         const stampCard = document.createElement("div");
         stampCard.className = `card ${status === '開催終了' || status === '今後開催' ? 'disabled-card' : ''}`;
@@ -807,7 +816,7 @@
         let badgeText = '📌 未出席 / スタンプ未獲得';
         if (isStamped) {
           badgeClass = 'got';
-          badgeText = '✅ スタンプ獲得済み（出席完了）';
+          badgeText = `✅ スタンプ獲得済み ${stampIcon}`;
         } else if (status === '今後開催') {
           badgeClass = 'upcoming';
           badgeText = '⏳ 今後開催';
@@ -1075,7 +1084,7 @@
         displayName: currentUser.displayName,
         eventId: eventId,
         detail: reactionString,
-        reactions: tagsArray // 配列構造でも受け取れるよう保持
+        reactions: tagsArray
       };
       
       const success = await sendPost(payload);
