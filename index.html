@@ -492,6 +492,22 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    /* フッター追加スタイル */
+    .footer {
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    .footer-link {
+      color: #888;
+      text-decoration: underline;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -512,6 +528,13 @@
         <div id="progress-percent" style="font-size:0.8rem; color:#888;">10%</div>
         <div id="error-container"></div>
       </div>
+    </div>
+
+    <!-- 管理者導線用フッター -->
+    <div class="footer">
+      <span id="admin-toggle-link" class="footer-link" onclick="toggleAdminMode()">
+        <!-- JSでモードに応じたテキストを描画 -->
+      </span>
     </div>
   </div>
 
@@ -619,9 +642,25 @@
       document.getElementById("processing-overlay").classList.remove("active");
     }
 
+    function toggleAdminMode() {
+      const url = new URL(window.location.href);
+      if (isAdminMode) {
+        url.searchParams.delete('mode');
+      } else {
+        url.searchParams.set('mode', 'admin');
+      }
+      window.location.href = url.toString();
+    }
+
     window.onload = async function() {
       const urlParams = new URLSearchParams(window.location.search);
       isAdminMode = urlParams.get('mode') === 'admin';
+
+      // フッターリンクの表示テキスト切り替え
+      const adminLinkElem = document.getElementById("admin-toggle-link");
+      if (adminLinkElem) {
+        adminLinkElem.innerText = isAdminMode ? "⚙️ 通常ユーザー画面に戻る" : "⚙️ 編集者（管理者）画面に切り替え";
+      }
 
       updateProgress(20, "LINEアカウント認証中...");
       
@@ -727,8 +766,7 @@
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
 
-      // --- スタンプラリーボードの生成 (開催終了イベント・獲得済みスタンプを含めて表示) ---
-      // 獲得済みのイベントを優先しつつ、全ての有効イベントを配列に並べる
+      // --- スタンプラリーボードの生成 ---
       const sortedEventKeysForBoard = [...validEventKeys].sort((a, b) => {
         const aStamped = userStamps.includes(a);
         const bStamped = userStamps.includes(b);
@@ -775,7 +813,7 @@
       `;
       stampsContainer.appendChild(stampBoard);
 
-      // --- 「上映予約・日程」タブのセクション分け ---
+      // --- 「上映予約・日程」タブ ---
       const activeOrUpcomingTitle = document.createElement("div");
       activeOrUpcomingTitle.className = "section-header-title";
       activeOrUpcomingTitle.innerHTML = "📅 受付中／今後開催";
@@ -817,7 +855,7 @@
         });
       }
 
-      // --- スタンプカード詳細・感情タグ＆管理者設定（スタンプタブ用） ---
+      // --- スタンプカード詳細・感情タグ＆管理者設定 ---
       validEventKeys.forEach(eventId => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
