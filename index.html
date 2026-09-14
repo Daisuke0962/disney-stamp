@@ -239,17 +239,19 @@
       border-color: #d1d8e0;
     }
 
-    /* ポスター画像＆魅力キャッチコピー UI (要件②) */
+    /* 縦長ポスター画像 UI (修正部分: aspect-ratio 2/3) */
     .poster-box {
       width: 100%;
-      height: 220px;
+      max-width: 300px; /* スマートフォンで広がりすぎないように制限 */
+      aspect-ratio: 2 / 3;
       border-radius: 8px;
       overflow: hidden;
-      margin-bottom: 12px;
+      margin: 0 auto 16px auto;
       background-color: #1a252f;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     }
 
     .poster-img {
@@ -258,26 +260,26 @@
       object-fit: cover;
     }
 
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-top: 0;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+    }
+
+    /* タイトル直下に配置するキャッチコピー UI */
     .catchphrase-box {
       background: #fdf6ec;
       border-left: 4px solid #f39c12;
-      padding: 10px 12px;
+      padding: 8px 12px;
       border-radius: 4px;
       font-size: 0.88rem;
       color: #5c3c00;
       font-weight: 500;
       margin-bottom: 14px;
       line-height: 1.4;
-    }
-
-    .card-title {
-      font-size: 1.25rem;
-      font-weight: bold;
-      color: var(--primary-color);
-      margin-top: 0;
-      margin-bottom: 10px;
-      border-bottom: 2px solid var(--bg-color);
-      padding-bottom: 8px;
     }
 
     .stamp-badge {
@@ -339,7 +341,7 @@
       margin-bottom: 8px;
     }
 
-    /* 予約者リスト UI (要件④) */
+    /* 予約者リスト UI */
     .booking-list-box {
       background-color: #ffffff;
       border: 1px solid #e2e8f0;
@@ -603,7 +605,7 @@
     </div>
   </div>
 
-  <!-- 管理者ログインモーダル (要件④) -->
+  <!-- 管理者ログインモーダル -->
   <div id="admin-login-modal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-title">🔐 編集者（管理者）認証</div>
@@ -643,9 +645,8 @@
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec"; 
     const LIFF_ID = "2011577734-Ymuphm2J"; 
-    const ADMIN_PASSWORD_HASH = "kacchan"; // 編集者ログインID
+    const ADMIN_PASSWORD_HASH = "kacchan"; 
 
-    // 要件③：LINE Messaging API トークン・ID
     const LINE_CHANNEL_ACCESS_TOKEN = "jkjwK9N01vkNkTFbSd2Y4+2SxBM6XscRhJBd87IWBhcTx1AcjYIAsbaOJhBY5Ao4WtorEHFVZKxCtvyPkstZfWaDfFFxe9n9yDayXznrY2PIHXOgnlKfR2KMktj8ahqj9GSF3GnwKVISpgkmvhZloAdB04t89/1O/w1cDnyilFU="; 
     const ADMIN_USER_ID = "Ua6eaaefab3d6ed7ce4736bac19259ea5";
 
@@ -653,7 +654,7 @@
     let masterEvents = {};
     let userBookings = {};
     let userStamps = [];
-    let allBookings = []; // 全体の予約リスト（管理者用）
+    let allBookings = []; 
     let isAdminMode = false;
     let pendingBookingData = null;
 
@@ -725,7 +726,6 @@
       document.getElementById("processing-overlay").classList.remove("active");
     }
 
-    /* 編集者画面ログイン制御 (要件④) */
     function handleAdminToggle() {
       if (isAdminMode) {
         const url = new URL(window.location.href);
@@ -893,7 +893,6 @@
                 ? `<div class="stamp-mark">${escapeHtml(stampIcon)}</div>` 
                 : `<div class="stamp-empty">${i + 1}</div>`
               }
-              <!-- 要件①: タイトル末尾にスタンプアイコンを表示 -->
               <div class="stamp-event-name">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
             </div>
           `;
@@ -980,17 +979,16 @@
           badgeText = '🔒 開催終了';
         }
 
-        // 要件②：ポスター画像とキャッチコピー
         const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
         const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
 
-        // 要件①：タイトル末尾にアイコン付加
+        // 配置順変更：ポスター -> タイトル -> タイトル直下のキャッチコピー -> バッジ
         let stampHtml = `
           <div class="poster-box">
             <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
           </div>
-          <div class="catchphrase-box">💬 「${catchphrase}」</div>
           <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
+          <div class="catchphrase-box">💬 「${catchphrase}」</div>
           <span class="stamp-badge ${badgeClass}">${badgeText}</span>
         `;
 
@@ -1005,7 +1003,6 @@
           `;
         }
 
-        // 要件④：編集者画面でのマスター一括編集フォーム＆申し込みリスト
         if (isAdminMode) {
           const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
           let bookingListHtml = eventBookings.length > 0
@@ -1128,17 +1125,16 @@
         badgeHtml = '<span class="stamp-badge ended" style="margin-bottom: 10px;">🔒 開催終了</span>';
       }
 
-      // 要件②：ポスター画像とキャッチコピー
       const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
       const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
 
-      // 要件①：タイトル末尾にアイコン追加
+      // 配置順変更：ポスター -> タイトル -> タイトル直下のキャッチコピー
       let bookingHtml = `
         <div class="poster-box">
           <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
         </div>
-        <div class="catchphrase-box">💬 「${catchphrase}」</div>
         <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
+        <div class="catchphrase-box">💬 「${catchphrase}」</div>
         ${badgeHtml}
         <div class="section-box" style="${isDisabled ? 'background-color: #eaedf0;' : ''}">
           <div class="section-title">📅 参加日程の選択</div>
@@ -1239,7 +1235,6 @@
       pendingBookingData = null;
     }
 
-    // 要件③：フロントからの確実なLINE通知送信
     async function sendDirectLineNotification(textMessage) {
       try {
         const targetUrl = "https://api.line.me/v2/bot/message/push";
@@ -1271,7 +1266,6 @@
       const eventName = masterEvents[eventId].name;
       const stampIcon = masterEvents[eventId].stampIcon || '🎬';
 
-      // 要件③：予約確定時にフロントエンドから確実にLINE通知を実行
       const lineNoticeText = `🎬 【上映会 参加予約通知】\n・参加者: ${currentUser.displayName}\n・作品名: ${eventName} ${stampIcon}\n・予約日時: ${selectedDate}`;
       sendDirectLineNotification(lineNoticeText);
 
@@ -1328,7 +1322,6 @@
       }
     }
 
-    // 要件④：マスターデータの一括更新関数（シート同期）
     async function saveEventMaster(eventId) {
       const name = document.getElementById(`edit-name-${eventId}`).value.trim();
       const stampIcon = document.getElementById(`edit-icon-${eventId}`).value.trim();
