@@ -180,7 +180,7 @@
       100% { transform: scale(1); opacity: 1; }
     }
 
-    /* ローディング表示 (初期読み込み用) */
+    /* ローディング表示 */
     .loading-container {
       text-align: center;
       padding: 40px 20px;
@@ -230,13 +230,44 @@
       margin-bottom: 20px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
       border: 1px solid var(--border-color);
+      overflow: hidden;
     }
 
-    /* 無効化カード（今後開催・開催終了）のスタイル */
     .card.disabled-card {
       background-color: #f8f9fa;
       opacity: 0.85;
       border-color: #d1d8e0;
+    }
+
+    /* ポスター画像＆魅力キャッチコピー UI (要件②) */
+    .poster-box {
+      width: 100%;
+      height: 220px;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      background-color: #1a252f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .poster-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .catchphrase-box {
+      background: #fdf6ec;
+      border-left: 4px solid #f39c12;
+      padding: 10px 12px;
+      border-radius: 4px;
+      font-size: 0.88rem;
+      color: #5c3c00;
+      font-weight: 500;
+      margin-bottom: 14px;
+      line-height: 1.4;
     }
 
     .card-title {
@@ -292,9 +323,43 @@
     .admin-box {
       background-color: #fff8e7;
       border: 1px solid #f39c12;
-      padding: 14px;
+      padding: 16px;
       border-radius: 8px;
       margin-top: 16px;
+    }
+
+    .admin-box label {
+      font-weight: bold;
+      color: #333;
+      margin-top: 8px;
+      display: block;
+    }
+
+    .admin-box input[type="text"], .admin-box select {
+      margin-bottom: 8px;
+    }
+
+    /* 予約者リスト UI (要件④) */
+    .booking-list-box {
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 10px;
+      margin-top: 10px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .booking-item {
+      font-size: 0.8rem;
+      padding: 6px 0;
+      border-bottom: 1px dashed #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .booking-item:last-child {
+      border-bottom: none;
     }
 
     .section-title {
@@ -318,7 +383,7 @@
       margin-bottom: 4px;
     }
 
-    select, input[type="text"] {
+    select, input[type="text"], input[type="password"] {
       width: 100%;
       padding: 10px;
       margin-bottom: 10px;
@@ -354,7 +419,7 @@
       cursor: not-allowed;
     }
 
-    /* 感情タグ複数選択UI */
+    /* 感情タグUI */
     .reaction-section {
       background-color: #fafbfc;
       border: 1px solid #e1e8ed;
@@ -420,7 +485,7 @@
       color: #a0aec0;
     }
 
-    /* モーダル共通 styles */
+    /* モーダル */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -493,7 +558,7 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* フッター追加スタイル */
+    /* フッター */
     .footer {
       margin-top: 32px;
       padding-top: 16px;
@@ -532,9 +597,24 @@
 
     <!-- 管理者導線用フッター -->
     <div class="footer">
-      <span id="admin-toggle-link" class="footer-link" onclick="toggleAdminMode()">
-        <!-- JSでモードに応じたテキストを描画 -->
+      <span id="admin-toggle-link" class="footer-link" onclick="handleAdminToggle()">
+        ⚙️ 編集者（管理者）画面に切り替え
       </span>
+    </div>
+  </div>
+
+  <!-- 管理者ログインモーダル (要件④) -->
+  <div id="admin-login-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-title">🔐 編集者（管理者）認証</div>
+      <div class="modal-body">
+        編集者画面に入るにはログインIDを入力してください。
+        <input type="password" id="admin-pass-input" style="margin-top: 12px;" placeholder="ログインIDを入力">
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeAdminLoginModal()">キャンセル</button>
+        <button onclick="submitAdminLogin()">ログイン</button>
+      </div>
     </div>
   </div>
 
@@ -563,11 +643,17 @@
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec"; 
     const LIFF_ID = "2011577734-Ymuphm2J"; 
+    const ADMIN_PASSWORD_HASH = "kacchan"; // 編集者ログインID
+
+    // 要件③：LINE Messaging API トークン・ID
+    const LINE_CHANNEL_ACCESS_TOKEN = "jkjwK9N01vkNkTFbSd2Y4+2SxBM6XscRhJBd87IWBhcTx1AcjYIAsbaOJhBY5Ao4WtorEHFVZKxCtvyPkstZfWaDfFFxe9n9yDayXznrY2PIHXOgnlKfR2KMktj8ahqj9GSF3GnwKVISpgkmvhZloAdB04t89/1O/w1cDnyilFU="; 
+    const ADMIN_USER_ID = "Ua6eaaefab3d6ed7ce4736bac19259ea5";
 
     let currentUser = { userId: "guest", displayName: "ゲスト" };
     let masterEvents = {};
     let userBookings = {};
     let userStamps = [];
+    let allBookings = []; // 全体の予約リスト（管理者用）
     let isAdminMode = false;
     let pendingBookingData = null;
 
@@ -585,7 +671,7 @@
     const selectedReactions = {};
 
     function escapeHtml(str) {
-      if (typeof str !== 'string') return str;
+      if (typeof str !== 'string') return str || '';
       return str.replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
@@ -595,17 +681,14 @@
 
     function formatDateOnly(dateStr) {
       if (!dateStr) return "";
-      
       const d = new Date(dateStr);
       if (!isNaN(d.getTime())) {
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return `${month}/${day}`;
       }
-
       const matched = dateStr.match(/(\d{1,2}\/\d{1,2})/);
       if (matched) return matched[1];
-
       return dateStr;
     }
 
@@ -642,21 +725,38 @@
       document.getElementById("processing-overlay").classList.remove("active");
     }
 
-    function toggleAdminMode() {
-      const url = new URL(window.location.href);
+    /* 編集者画面ログイン制御 (要件④) */
+    function handleAdminToggle() {
       if (isAdminMode) {
+        const url = new URL(window.location.href);
         url.searchParams.delete('mode');
+        window.location.href = url.toString();
       } else {
-        url.searchParams.set('mode', 'admin');
+        document.getElementById("admin-pass-input").value = "";
+        document.getElementById("admin-login-modal").classList.add("active");
       }
-      window.location.href = url.toString();
+    }
+
+    function closeAdminLoginModal() {
+      document.getElementById("admin-login-modal").classList.remove("active");
+    }
+
+    function submitAdminLogin() {
+      const pass = document.getElementById("admin-pass-input").value.trim();
+      if (pass === ADMIN_PASSWORD_HASH) {
+        closeAdminLoginModal();
+        const url = new URL(window.location.href);
+        url.searchParams.set('mode', 'admin');
+        window.location.href = url.toString();
+      } else {
+        alert("ログインIDが不正です。");
+      }
     }
 
     window.onload = async function() {
       const urlParams = new URLSearchParams(window.location.search);
       isAdminMode = urlParams.get('mode') === 'admin';
 
-      // フッターリンクの表示テキスト切り替え
       const adminLinkElem = document.getElementById("admin-toggle-link");
       if (adminLinkElem) {
         adminLinkElem.innerText = isAdminMode ? "⚙️ 通常ユーザー画面に戻る" : "⚙️ 編集者（管理者）画面に切り替え";
@@ -684,7 +784,7 @@
         currentUser.displayName = "開発用ユーザー";
       }
 
-      document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様 ${isAdminMode ? ' (管理者モード)' : ''}`;
+      document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様 ${isAdminMode ? ' (編集者モード)' : ''}`;
 
       updateProgress(30, "サーバーへ接続中...");
       await loadStatus();
@@ -701,7 +801,7 @@
         if (currentPercent < 85) {
           currentPercent += 1.5;
           let msg = "サーバーと通信中...";
-          if (currentPercent > 45) msg = "GASを起動中... (少し時間がかかります)";
+          if (currentPercent > 45) msg = "GASを起動中...";
           if (currentPercent > 70) msg = "スプレッドシートから最新データを読み込み中...";
           updateProgress(currentPercent, msg);
         }
@@ -727,6 +827,7 @@
         masterEvents = data.events || {};
         userBookings = data.userBookings || {};
         userStamps = data.userStamps || [];
+        allBookings = data.allBookings || [];
 
         updateProgress(100, "完了!");
         setTimeout(() => {
@@ -792,7 +893,8 @@
                 ? `<div class="stamp-mark">${escapeHtml(stampIcon)}</div>` 
                 : `<div class="stamp-empty">${i + 1}</div>`
               }
-              <div class="stamp-event-name">${escapeHtml(event.name)}</div>
+              <!-- 要件①: タイトル末尾にスタンプアイコンを表示 -->
+              <div class="stamp-event-name">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
             </div>
           `;
         } else {
@@ -855,7 +957,7 @@
         });
       }
 
-      // --- スタンプカード詳細・感情タグ＆管理者設定 ---
+      // --- スタンプカード詳細＆管理者設定 ---
       validEventKeys.forEach(eventId => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
@@ -878,8 +980,17 @@
           badgeText = '🔒 開催終了';
         }
 
+        // 要件②：ポスター画像とキャッチコピー
+        const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
+        const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
+
+        // 要件①：タイトル末尾にアイコン付加
         let stampHtml = `
-          <div class="card-title">${escapeHtml(event.name)}</div>
+          <div class="poster-box">
+            <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
+          </div>
+          <div class="catchphrase-box">💬 「${catchphrase}」</div>
+          <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
           <span class="stamp-badge ${badgeClass}">${badgeText}</span>
         `;
 
@@ -894,13 +1005,65 @@
           `;
         }
 
+        // 要件④：編集者画面でのマスター一括編集フォーム＆申し込みリスト
         if (isAdminMode) {
+          const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
+          let bookingListHtml = eventBookings.length > 0
+            ? eventBookings.map(b => `
+                <div class="booking-item">
+                  <span><strong>${escapeHtml(b.displayName)}</strong> (${escapeHtml(b.selectedDate)})</span>
+                  <span style="color:#888;">${escapeHtml(b.timestamp)}</span>
+                </div>
+              `).join('')
+            : '<div style="font-size:0.8rem; color:#888;">まだ申し込みはありません。</div>';
+
           stampHtml += `
             <div class="admin-box">
-              <div class="section-title" style="color: #d35400;">⚙️ 管理者設定：スタンプ絵文字 (stampIcon)</div>
-              <label for="stamp-icon-input-${eventId}">スタンプとして表示する絵文字を入力:</label>
-              <input type="text" id="stamp-icon-input-${eventId}" value="${escapeHtml(stampIcon)}" placeholder="例: 🦁 や 🍿">
-              <button onclick="updateStampIcon('${eventId}')" class="admin-btn">スタンプ絵文字を更新する</button>
+              <div class="section-title" style="color: #d35400;">⚙️ 編集者権限：マスターデータ編集</div>
+              
+              <label>イベントID（変更不可）:</label>
+              <input type="text" value="${escapeHtml(eventId)}" disabled style="background:#e9ecef;">
+
+              <label>イベント名:</label>
+              <input type="text" id="edit-name-${eventId}" value="${escapeHtml(event.name)}">
+
+              <label>スタンプアイコン絵文字:</label>
+              <input type="text" id="edit-icon-${eventId}" value="${escapeHtml(stampIcon)}">
+
+              <label>ポスター画像URL:</label>
+              <input type="text" id="edit-image-${eventId}" value="${escapeHtml(event.imageUrl)}" placeholder="https://...">
+
+              <label>本作の魅力（キャッチコピー）:</label>
+              <input type="text" id="edit-catchphrase-${eventId}" value="${escapeHtml(event.catchphrase)}">
+
+              <label>秘密の質問文:</label>
+              <input type="text" id="edit-question-${eventId}" value="${escapeHtml(event.question)}">
+
+              <label>正解コード:</label>
+              <input type="text" id="edit-answer-${eventId}" value="${escapeHtml(event.answer)}">
+
+              <label>候補日程①:</label>
+              <input type="text" id="edit-date1-${eventId}" value="${escapeHtml(event.dates[0] || '')}">
+              <label>候補日程②:</label>
+              <input type="text" id="edit-date2-${eventId}" value="${escapeHtml(event.dates[1] || '')}">
+              <label>候補日程③:</label>
+              <input type="text" id="edit-date3-${eventId}" value="${escapeHtml(event.dates[2] || '')}">
+
+              <label>ステータス:</label>
+              <select id="edit-status-${eventId}">
+                <option value="受付中" ${status === '受付中' ? 'selected' : ''}>受付中</option>
+                <option value="今後開催" ${status === '今後開催' ? 'selected' : ''}>今後開催</option>
+                <option value="開催終了" ${status === '開催終了' ? 'selected' : ''}>開催終了</option>
+              </select>
+
+              <button onclick="saveEventMaster('${eventId}')" class="admin-btn" style="margin-top:10px;">シートに更新内容を保存</button>
+
+              <hr style="border:none; border-top:1px solid #f39c12; margin:16px 0;">
+
+              <div class="section-title" style="color:#d35400;">📋 このイベントの申込状況一覧 (${eventBookings.length}件)</div>
+              <div class="booking-list-box">
+                ${bookingListHtml}
+              </div>
             </div>
           `;
         }
@@ -949,6 +1112,7 @@
       const bookedDateRaw = userBookings[eventId];
       const formattedDateOnly = formatDateOnly(bookedDateRaw);
       const status = event.status || "受付中";
+      const stampIcon = event.stampIcon || '🎬';
 
       const isUpcoming = (status === "今後開催");
       const isEnded = (status === "開催終了");
@@ -964,8 +1128,17 @@
         badgeHtml = '<span class="stamp-badge ended" style="margin-bottom: 10px;">🔒 開催終了</span>';
       }
 
+      // 要件②：ポスター画像とキャッチコピー
+      const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
+      const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
+
+      // 要件①：タイトル末尾にアイコン追加
       let bookingHtml = `
-        <div class="card-title">${escapeHtml(event.name)}</div>
+        <div class="poster-box">
+          <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
+        </div>
+        <div class="catchphrase-box">💬 「${catchphrase}」</div>
+        <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
         ${badgeHtml}
         <div class="section-box" style="${isDisabled ? 'background-color: #eaedf0;' : ''}">
           <div class="section-title">📅 参加日程の選択</div>
@@ -1048,10 +1221,11 @@
       }
 
       const eventName = masterEvents[eventId].name;
+      const stampIcon = masterEvents[eventId].stampIcon || '🎬';
       pendingBookingData = { eventId, selectedDate };
 
       document.getElementById("modal-body-text").innerHTML = `
-        <strong>「${escapeHtml(eventName)}」</strong><br>
+        <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong><br>
         日時：<strong>${escapeHtml(selectedDate)}</strong><br><br>
         この日程で予約を確定しますか？
       `;
@@ -1065,12 +1239,41 @@
       pendingBookingData = null;
     }
 
+    // 要件③：フロントからの確実なLINE通知送信
+    async function sendDirectLineNotification(textMessage) {
+      try {
+        const targetUrl = "https://api.line.me/v2/bot/message/push";
+        const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(targetUrl);
+
+        await fetch(proxyUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + LINE_CHANNEL_ACCESS_TOKEN
+          },
+          body: JSON.stringify({
+            to: ADMIN_USER_ID,
+            messages: [{ type: "text", text: textMessage }]
+          })
+        });
+      } catch (e) {
+        console.warn("Direct LINE Push Alert:", e);
+      }
+    }
+
     async function executeBooking() {
       if (!pendingBookingData) return;
       const { eventId, selectedDate } = pendingBookingData;
       closeModal();
 
       showProcessing("予約を確定しています...<br><small>（約10秒ほどかかります）</small>");
+
+      const eventName = masterEvents[eventId].name;
+      const stampIcon = masterEvents[eventId].stampIcon || '🎬';
+
+      // 要件③：予約確定時にフロントエンドから確実にLINE通知を実行
+      const lineNoticeText = `🎬 【上映会 参加予約通知】\n・参加者: ${currentUser.displayName}\n・作品名: ${eventName} ${stampIcon}\n・予約日時: ${selectedDate}`;
+      sendDirectLineNotification(lineNoticeText);
 
       const payload = {
         action: "BOOKING",
@@ -1082,7 +1285,7 @@
 
       const success = await sendPost(payload);
       if (success) {
-        alert(`「${masterEvents[eventId].name}」を ${selectedDate} で予約完了しました！`);
+        alert(`「${eventName}」を ${selectedDate} で予約完了しました！`);
         resetToInitialLoading();
         hideProcessing();
         await loadStatus();
@@ -1125,28 +1328,44 @@
       }
     }
 
-    async function updateStampIcon(eventId) {
-      const inputElem = document.getElementById(`stamp-icon-input-${eventId}`);
-      if (!inputElem) return;
-      const newIcon = inputElem.value.trim();
+    // 要件④：マスターデータの一括更新関数（シート同期）
+    async function saveEventMaster(eventId) {
+      const name = document.getElementById(`edit-name-${eventId}`).value.trim();
+      const stampIcon = document.getElementById(`edit-icon-${eventId}`).value.trim();
+      const imageUrl = document.getElementById(`edit-image-${eventId}`).value.trim();
+      const catchphrase = document.getElementById(`edit-catchphrase-${eventId}`).value.trim();
+      const question = document.getElementById(`edit-question-${eventId}`).value.trim();
+      const answer = document.getElementById(`edit-answer-${eventId}`).value.trim();
+      const date1 = document.getElementById(`edit-date1-${eventId}`).value.trim();
+      const date2 = document.getElementById(`edit-date2-${eventId}`).value.trim();
+      const date3 = document.getElementById(`edit-date3-${eventId}`).value.trim();
+      const status = document.getElementById(`edit-status-${eventId}`).value;
 
-      if (!newIcon) {
-        alert("絵文字を入力してください。");
+      if (!name) {
+        alert("イベント名は必須です。");
         return;
       }
 
-      showProcessing("スタンプ絵文字を更新中...");
+      showProcessing("マスターデータ・スプレッドシートを更新中...");
+      
       const payload = {
-        action: "UPDATE_STAMP_ICON",
-        userId: currentUser.userId,
-        displayName: currentUser.displayName,
+        action: "UPDATE_EVENT_MASTER",
         eventId: eventId,
-        stampIcon: newIcon
+        name: name,
+        stampIcon: stampIcon || "🎬",
+        imageUrl: imageUrl,
+        catchphrase: catchphrase,
+        question: question,
+        answer: answer,
+        date1: date1,
+        date2: date2,
+        date3: date3,
+        status: status
       };
 
       const success = await sendPost(payload);
       if (success) {
-        alert(`スタンプ絵文字を 「${newIcon}」 に更新しました！`);
+        alert("スプレッドシートへの更新が完了しました！");
         resetToInitialLoading();
         hideProcessing();
         await loadStatus();
