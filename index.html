@@ -289,6 +289,14 @@
       margin-bottom: 16px;
     }
 
+    .admin-box {
+      background-color: #fff8e7;
+      border: 1px solid #f39c12;
+      padding: 14px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+
     .section-title {
       font-size: 0.9rem;
       font-weight: bold;
@@ -339,6 +347,7 @@
     }
 
     button.secondary { background-color: #7f8c8d; }
+    button.admin-btn { background-color: #d35400; }
     
     button:disabled {
       background-color: #bdc3c7;
@@ -555,6 +564,15 @@
     // 各イベントの選択状態を保持するオブジェクト { eventId: Set(["🥹 感動", ...]) }
     const selectedReactions = {};
 
+    function escapeHtml(str) {
+      if (typeof str !== 'string') return str;
+      return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+    }
+
     function formatDateOnly(dateStr) {
       if (!dateStr) return "";
       
@@ -630,7 +648,7 @@
         currentUser.displayName = "開発用ユーザー";
       }
 
-      document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様`;
+      document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様 ${isAdminMode ? ' (管理者モード)' : ''}`;
 
       updateProgress(30, "サーバーへ接続中...");
       await loadStatus();
@@ -689,7 +707,6 @@
     function renderApp() {
       const container = document.getElementById("content");
       
-      // 条件：A列（イベントID＝キー）とB列（イベント名＝event.name）が入っているもののみ抽出
       const validEventKeys = Object.keys(masterEvents).filter(eventId => {
         const ev = masterEvents[eventId];
         return eventId && ev && ev.name && ev.name.trim() !== "";
@@ -713,7 +730,7 @@
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
 
-      // --- スタンプラリーボードの生成 (「受付中」および「今後開催」のみを表示対象とする / 最大4つ) ---
+      // --- スタンプラリーボードの生成 ---
       const activeOrUpcomingKeysForBoard = validEventKeys.filter(eventId => {
         const status = masterEvents[eventId].status;
         return status !== "開催終了";
@@ -728,7 +745,6 @@
         if (eventId) {
           const event = masterEvents[eventId];
           const isStamped = userStamps.includes(eventId);
-          // スプレッドシートから届く stampIcon（作品カスタム絵文字）を適用。未設定時は '🎬'
           const stampIcon = event.stampIcon || '🎬';
 
           gridCellsHtml += `
@@ -759,7 +775,6 @@
       stampsContainer.appendChild(stampBoard);
 
       // --- 「上映予約・日程」タブのセクション分け ---
-      // 1. 受付中 / 今後開催 セクション
       const activeOrUpcomingTitle = document.createElement("div");
       activeOrUpcomingTitle.className = "section-header-title";
       activeOrUpcomingTitle.innerHTML = "📅 受付中／今後開催";
@@ -781,7 +796,6 @@
         });
       }
 
-      // 2. 開催終了 セクション
       const endedTitle = document.createElement("div");
       endedTitle.className = "section-header-title";
       endedTitle.innerHTML = "🔒 開催終了";
@@ -802,7 +816,7 @@
         });
       }
 
-      // --- クイズ・スタンプカード（スタンプタブ用） ---
+      // --- スタンプカード＆絵文字設定（スタンプタブ用） ---
       validEventKeys.forEach(eventId => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
@@ -841,7 +855,19 @@
           `;
         }
 
-        // 感情リアクション（複数選択対応）のレンダリング
+        // 管理者モード時：スタンプ用絵文字設定フォームを表示
+        if (isAdminMode) {
+          stampHtml += `
+            <div class="admin-box">
+              <div class="section-title" style="color: #d35400;">⚙️ 管理者設定：スタンプ絵文字 (stampIcon)</div>
+              <label for="stamp-icon-input-${eventId}">スタンプとして表示する絵文字を入力:</label>
+              <input type="text" id="stamp-icon-input-${eventId}" value="${escapeHtml(stampIcon)}" placeholder="例: 🦁 や 🍿">
+              <button onclick="updateStampIcon('${eventId}')" class="admin-btn">スタンプ絵文字を更新する</button>
+            </div>
+          `;
+        }
+
+        // 感情リアクションのレンダリング
         if (!selectedReactions[eventId]) {
           selectedReactions[eventId] = new Set();
         }
@@ -881,7 +907,6 @@
       });
     }
 
-    // 予約カードを生成する共通ヘルパー関数
     function renderBookingCard(eventId, container) {
       const event = masterEvents[eventId];
       const bookedDateRaw = userBookings[eventId];
@@ -941,7 +966,6 @@
       }
     }
 
-    // 感情タグのトグル切り替え
     function toggleEmotionTag(eventId, tag, isDisabled) {
       if (isDisabled) return;
 
@@ -956,7 +980,6 @@
         set.add(tag);
       }
 
-      // UIの選択状態を更新
       const container = document.getElementById(`chips-${eventId}`);
       const btn = document.getElementById(`reaction-btn-${eventId}`);
       
@@ -1065,7 +1088,37 @@
       }
     }
 
-    // 複数選択された感情タグを配列形式でまとめて送信する関数
+    // 管理者用：スタンプ用絵文字（stampIcon）の更新API呼び出し
+    async function updateStampIcon(eventId) {
+      const inputElem = document.getElementById(`stamp-icon-input-${eventId}`);
+      if (!inputElem) return;
+      const newIcon = inputElem.value.trim();
+
+      if (!newIcon) {
+        alert("絵文字を入力してください。");
+        return;
+      }
+
+      showProcessing("スタンプ絵文字を更新中...");
+      const payload = {
+        action: "UPDATE_STAMP_ICON",
+        userId: currentUser.userId,
+        displayName: currentUser.displayName,
+        eventId: eventId,
+        stampIcon: newIcon
+      };
+
+      const success = await sendPost(payload);
+      if (success) {
+        alert(`スタンプ絵文字を 「${newIcon}」 に更新しました！`);
+        resetToInitialLoading();
+        hideProcessing();
+        await loadStatus();
+      } else {
+        hideProcessing();
+      }
+    }
+
     async function sendMultipleReactions(eventId) {
       const set = selectedReactions[eventId];
       if (!set || set.size === 0) {
@@ -1094,7 +1147,6 @@
         alert(`リアクション（${reactionString}）を送信しました！`);
         set.clear();
         
-        // UIのリセット
         const container = document.getElementById(`chips-${eventId}`);
         const btn = document.getElementById(`reaction-btn-${eventId}`);
         if (container) {
@@ -1120,26 +1172,19 @@
     }
 
     function resetToInitialLoading() {
-      document.getElementById("content").innerHTML = `
-        <div class="loading-container">
-          <div id="status-text" class="status-text">最新の情報を取得中...</div>
-          <div class="progress-bar-wrapper">
-            <div id="progress-bar" class="progress-bar" style="width: 30%;"></div>
+      const container = document.getElementById("content");
+      if (container) {
+        container.innerHTML = `
+          <div class="loading-container">
+            <div id="status-text" class="status-text">データを再読込中...</div>
+            <div class="progress-bar-wrapper">
+              <div id="progress-bar" class="progress-bar"></div>
+            </div>
+            <div id="progress-percent" style="font-size:0.8rem; color:#888;">10%</div>
+            <div id="error-container"></div>
           </div>
-          <div id="progress-percent" style="font-size:0.8rem; color:#888;">30%</div>
-          <div id="error-container"></div>
-        </div>
-      `;
-    }
-
-    function escapeHtml(str) {
-      if (!str) return "";
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+        `;
+      }
     }
   </script>
 </body>
