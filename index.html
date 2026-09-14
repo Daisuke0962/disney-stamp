@@ -109,15 +109,15 @@
 
     .stamp-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr)); /* ← ここを minmax(0, 1fr) に変更！ */
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
       width: 100%;
       box-sizing: border-box;
     }
 
     .stamp-cell {
-      width: 100%;             /* 親要素のグリッド幅にぴったり収める */
-      min-height: 100px;       /* 縦幅の最小値を指定（ここでお好みの高さに調整できます） */
+      width: 100%;             
+      min-height: 100px;       
       background-color: #f8f9fa;
       border: 2px solid #e0e0e0;
       border-radius: 12px;
@@ -150,13 +150,13 @@
     }
 
     .stamp-event-name {
-      font-size: 0.7rem;          /* 文字サイズをほんの少し小さく調整 */
+      font-size: 0.7rem;          
       font-weight: bold;
       color: #555;
       width: 100%;
-      word-break: break-all;      /* 日本語の途中で綺麗に折り返す */
+      word-break: break-all;      
       display: -webkit-box;
-      -webkit-line-clamp: 2;      /* 最大2行まで表示 (3行にしたい場合は 3 に変更) */
+      -webkit-line-clamp: 2;      
       -webkit-box-orient: vertical;
       overflow: hidden;
       line-height: 1.2;
@@ -167,7 +167,7 @@
       100% { transform: scale(1); opacity: 1; }
     }
 
-    /* ローディング表示 */
+    /* ローディング表示 (初期読み込み用) */
     .loading-container {
       text-align: center;
       padding: 40px 20px;
@@ -301,6 +301,11 @@
     }
 
     button.secondary { background-color: #7f8c8d; }
+    
+    button:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
 
     .reactions {
       display: flex;
@@ -317,7 +322,7 @@
       padding: 8px;
     }
 
-    /* モーダル styles */
+    /* モーダル共通 styles */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -325,7 +330,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.6); /* 少し暗めにして没入感を出す */
       z-index: 1000;
       justify-content: center;
       align-items: center;
@@ -368,6 +373,28 @@
       background-color: #e0e0e0;
       color: #333;
     }
+
+    /* ★追加：全画面ローディング（くるくる）用のスタイル */
+    #processing-overlay { z-index: 2000; }
+    .spinner-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: white;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -402,8 +429,18 @@
     </div>
   </div>
 
+  <!-- ★追加：全画面処理中ローディング -->
+  <div id="processing-overlay" class="modal-overlay">
+    <div class="spinner-container">
+      <div class="spinner"></div>
+      <div id="processing-message" style="text-align:center; font-weight:bold; line-height:1.5;">
+        処理中...<br><small>（10秒ほどかかります）</small>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // ★設定項目
+    // ★設定項目（元のまま維持）
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec"; 
     const LIFF_ID = "2011577734-Ymuphm2J"; 
 
@@ -418,7 +455,6 @@
     function formatDateOnly(dateStr) {
       if (!dateStr) return "";
       
-      // ISO文字列 (例: 2026-10-01T10:30:00.000Z) のパース
       const d = new Date(dateStr);
       if (!isNaN(d.getTime())) {
         const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -426,11 +462,8 @@
         return `${month}/${day}`;
       }
 
-      // "09/26 19:30" や "10/01" のようなテキストの場合は時間部分をカット
       const matched = dateStr.match(/(\d{1,2}\/\d{1,2})/);
-      if (matched) {
-        return matched[1];
-      }
+      if (matched) return matched[1];
 
       return dateStr;
     }
@@ -457,6 +490,16 @@
           <button onclick="location.reload()" style="margin-top:15px; background-color:#e74c3c;">再読み込み</button>
         `;
       }
+    }
+
+    // ★追加：全画面ローディングの表示/非表示関数
+    function showProcessing(message = "処理中...<br><small>（約10秒ほどかかります）</small>") {
+      document.getElementById("processing-message").innerHTML = message;
+      document.getElementById("processing-overlay").classList.add("active");
+    }
+
+    function hideProcessing() {
+      document.getElementById("processing-overlay").classList.remove("active");
     }
 
     window.onload = async function() {
@@ -563,7 +606,7 @@
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
 
-      // --- スタンプラリーボード (右タブの最上部) の生成 ---
+      // --- スタンプラリーボードの生成 ---
       const stampBoard = document.createElement("div");
       stampBoard.className = "stamp-board";
       
@@ -711,10 +754,14 @@
       pendingBookingData = null;
     }
 
+    // ★変更：ローディング表示を追加し、待機するように修正
     async function executeBooking() {
       if (!pendingBookingData) return;
       const { eventId, selectedDate } = pendingBookingData;
       closeModal();
+
+      // ローディング画面を表示
+      showProcessing("予約を確定しています...<br><small>（約10秒ほどかかります）</small>");
 
       const payload = {
         action: "BOOKING",
@@ -724,11 +771,19 @@
         detail: selectedDate
       };
 
-      await sendPost(payload);
-      alert(`「${masterEvents[eventId].name}」を ${selectedDate} で予約完了しました！`);
-      await loadStatus();
+      const success = await sendPost(payload);
+      if (success) {
+        alert(`「${masterEvents[eventId].name}」を ${selectedDate} で予約完了しました！`);
+        // 成功したら画面をリセットして再読み込み
+        resetToInitialLoading();
+        hideProcessing();
+        await loadStatus();
+      } else {
+        hideProcessing(); // エラー時は元に戻す
+      }
     }
 
+    // ★変更：クイズ回答時もローディングを挟む
     async function submitAnswer(eventId) {
       const inputVal = document.getElementById(`answer-input-${eventId}`).value.trim();
       const correctAnswer = masterEvents[eventId].answer;
@@ -739,21 +794,31 @@
       }
 
       if (inputVal === correctAnswer) {
+        showProcessing("スタンプを押印しています...<br><small>（約10秒ほどかかります）</small>");
         const payload = {
           action: "CHECK_STAMP",
           userId: currentUser.userId,
           displayName: currentUser.displayName,
           eventId: eventId
         };
-        await sendPost(payload);
-        alert("🎉 正解です！スタンプを獲得しました！");
-        await loadStatus();
+        const success = await sendPost(payload);
+        
+        if (success) {
+          alert("🎉 正解です！スタンプを獲得しました！");
+          resetToInitialLoading();
+          hideProcessing();
+          await loadStatus();
+        } else {
+          hideProcessing();
+        }
       } else {
         alert("❌ 残念！回答が正しくありません。");
       }
     }
 
+    // ★変更：リアクション送信時もローディングを挟む
     async function sendReaction(eventId, reaction) {
+      showProcessing("リアクションを送信中...");
       const payload = {
         action: "REACTION",
         userId: currentUser.userId,
@@ -761,10 +826,16 @@
         eventId: eventId,
         detail: reaction
       };
-      await sendPost(payload);
-      alert(`リアクション ${reaction} を送信しました！`);
+      
+      const success = await sendPost(payload);
+      hideProcessing();
+      
+      if (success) {
+        alert(`リアクション ${reaction} を送信しました！`);
+      }
     }
 
+    // ★変更：sendPostが成功したかどうか(true/false)を返すように修正
     async function sendPost(payload) {
       try {
         await fetch(GAS_URL, {
@@ -772,10 +843,26 @@
           headers: { "Content-Type": "text/plain" },
           body: JSON.stringify(payload)
         });
+        return true;
       } catch (err) {
         console.error("通信エラー:", err);
         alert("エラーが発生しました。通信環境をご確認ください。");
+        return false;
       }
+    }
+
+    // 更新完了後にUIを初期ローディング表示に戻すための補助関数
+    function resetToInitialLoading() {
+      document.getElementById("content").innerHTML = `
+        <div class="loading-container">
+          <div id="status-text" class="status-text">最新の情報を取得中...</div>
+          <div class="progress-bar-wrapper">
+            <div id="progress-bar" class="progress-bar" style="width: 30%;"></div>
+          </div>
+          <div id="progress-percent" style="font-size:0.8rem; color:#888;">30%</div>
+          <div id="error-container"></div>
+        </div>
+      `;
     }
 
     function escapeHtml(str) {
