@@ -235,7 +235,7 @@
     /* 無効化カード（今後開催・開催終了）のスタイル */
     .card.disabled-card {
       background-color: #f8f9fa;
-      opacity: 0.75;
+      opacity: 0.85;
       border-color: #d1d8e0;
     }
 
@@ -345,19 +345,70 @@
       cursor: not-allowed;
     }
 
-    .reactions {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
+    /* 瞑想アプリ風・感情タグ複数選択UI */
+    .reaction-section {
+      background-color: #fafbfc;
+      border: 1px solid #e1e8ed;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
     }
 
-    .reactions button {
-      flex: 1;
+    .reaction-subtitle {
+      font-size: 0.85rem;
+      color: #666;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .reaction-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+
+    .chip {
       background-color: #ffffff;
-      color: #333;
-      border: 1px solid #ddd;
-      font-size: 1.2rem;
-      padding: 8px;
+      border: 1px solid #d1d8e0;
+      color: #4a5568;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chip.selected {
+      background-color: #2c3e50;
+      color: #ffffff;
+      border-color: #2c3e50;
+      box-shadow: 0 2px 6px rgba(44, 62, 80, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .chip.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .reaction-submit-btn {
+      background-color: #34495e;
+      color: #fff;
+      font-size: 0.9rem;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .reaction-submit-btn:disabled {
+      background-color: #cbd5e0;
+      color: #a0aec0;
     }
 
     /* モーダル共通 styles */
@@ -488,6 +539,21 @@
     let userStamps = [];
     let isAdminMode = false;
     let pendingBookingData = null;
+
+    // リアクション用短縮感情タグリスト
+    const EMOTION_TAGS = [
+      "🥹 感動",
+      "☕️ ほっこり",
+      "🪄 余韻",
+      "💡 発見",
+      "🍃 すっきり",
+      "❤️ 愛おしい",
+      "☕️ 穏やか",
+      "✨ 高揚"
+    ];
+
+    // 各イベントの選択状態を保持するオブジェクト { eventId: Set(["🥹 感動", ...]) }
+    const selectedReactions = {};
 
     function formatDateOnly(dateStr) {
       if (!dateStr) return "";
@@ -766,15 +832,38 @@
           `;
         }
 
+        // 感情リアクション（複数選択対応）のレンダリング
+        if (!selectedReactions[eventId]) {
+          selectedReactions[eventId] = new Set();
+        }
+
+        const isReactionDisabled = (status === '今後開催' || status === '開催終了');
+
         stampHtml += `
-          <div style="margin-top: 15px; text-align: center;">
-            <label>上映へのリアクション・感想を送る</label>
-            <div class="reactions">
-              <button onclick="sendReaction('${eventId}', '❤️')">❤️</button>
-              <button onclick="sendReaction('${eventId}', '👏')">👏</button>
-              <button onclick="sendReaction('${eventId}', '🔥')">🔥</button>
-              <button onclick="sendReaction('${eventId}', '😭')">😭</button>
+          <div class="reaction-section">
+            <div class="section-title" style="text-align:center;">✨ 心の動きを記録（複数選択可）</div>
+            <div class="reaction-subtitle">観賞後の気持ちに当てはまる感情を選んで送信できます</div>
+            <div class="reaction-chips" id="chips-${eventId}">
+              ${EMOTION_TAGS.map(tag => {
+                const isSelected = selectedReactions[eventId].has(tag);
+                return `
+                  <div 
+                    class="chip ${isSelected ? 'selected' : ''} ${isReactionDisabled ? 'disabled' : ''}" 
+                    onclick="toggleEmotionTag('${eventId}', '${escapeHtml(tag)}', ${isReactionDisabled})"
+                  >
+                    ${escapeHtml(tag)}
+                  </div>
+                `;
+              }).join('')}
             </div>
+            <button 
+              id="reaction-btn-${eventId}" 
+              class="reaction-submit-btn" 
+              onclick="sendMultipleReactions('${eventId}')"
+              ${isReactionDisabled || selectedReactions[eventId].size === 0 ? 'disabled' : ''}
+            >
+              ${isReactionDisabled ? '受付時間外です' : '選択したリアクションを送る'}
+            </button>
           </div>
         `;
 
@@ -788,7 +877,7 @@
       const event = masterEvents[eventId];
       const bookedDateRaw = userBookings[eventId];
       const formattedDateOnly = formatDateOnly(bookedDateRaw);
-      const status = event.status || "受付中"; // デフォルトは受付中扱い
+      const status = event.status || "受付中";
 
       const isUpcoming = (status === "今後開催");
       const isEnded = (status === "開催終了");
@@ -814,7 +903,7 @@
           </div>
           <label for="date-select-${eventId}">参加可能日時を選択:</label>
           <select id="date-select-${eventId}" ${isDisabled ? 'disabled' : ''}>
-            ${event.dates.length > 0 
+            ${event.dates && event.dates.length > 0 
               ? event.dates.map(d => `<option value="${escapeHtml(d)}" ${d === bookedDateRaw ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')
               : '<option value="">日程未定</option>'
             }
@@ -840,6 +929,43 @@
       } else {
         document.getElementById('btn-tab-stamps').classList.add('active');
         document.getElementById('tab-stamps').classList.add('active');
+      }
+    }
+
+    // 感情タグのトグル切り替え
+    function toggleEmotionTag(eventId, tag, isDisabled) {
+      if (isDisabled) return;
+
+      if (!selectedReactions[eventId]) {
+        selectedReactions[eventId] = new Set();
+      }
+
+      const set = selectedReactions[eventId];
+      if (set.has(tag)) {
+        set.delete(tag);
+      } else {
+        set.add(tag);
+      }
+
+      // UIの選択状態を更新
+      const container = document.getElementById(`chips-${eventId}`);
+      const btn = document.getElementById(`reaction-btn-${eventId}`);
+      
+      if (container) {
+        const chips = container.querySelectorAll('.chip');
+        chips.forEach(chip => {
+          if (chip.innerText.trim() === tag) {
+            if (set.has(tag)) {
+              chip.classList.add('selected');
+            } else {
+              chip.classList.remove('selected');
+            }
+          }
+        });
+      }
+
+      if (btn) {
+        btn.disabled = set.size === 0;
       }
     }
 
@@ -930,21 +1056,42 @@
       }
     }
 
-    async function sendReaction(eventId, reaction) {
+    // 複数選択された感情タグを配列形式でまとめて送信する関数
+    async function sendMultipleReactions(eventId) {
+      const set = selectedReactions[eventId];
+      if (!set || set.size === 0) {
+        alert("リアクションを選択してください。");
+        return;
+      }
+
+      const tagsArray = Array.from(set);
+      const reactionString = tagsArray.join(", ");
+
       showProcessing("リアクションを送信中...");
+      
       const payload = {
         action: "REACTION",
         userId: currentUser.userId,
         displayName: currentUser.displayName,
         eventId: eventId,
-        detail: reaction
+        detail: reactionString,
+        reactions: tagsArray // 配列構造でも受け取れるよう保持
       };
       
       const success = await sendPost(payload);
       hideProcessing();
       
       if (success) {
-        alert(`リアクション ${reaction} を送信しました！`);
+        alert(`リアクション（${reactionString}）を送信しました！`);
+        set.clear();
+        
+        // UIのリセット
+        const container = document.getElementById(`chips-${eventId}`);
+        const btn = document.getElementById(`reaction-btn-${eventId}`);
+        if (container) {
+          container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+        }
+        if (btn) btn.disabled = true;
       }
     }
 
