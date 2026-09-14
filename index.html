@@ -89,6 +89,19 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
+    /* セクション見出し */
+    .section-header-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--primary-color);
+      margin: 24px 0 12px 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-left: 4px solid var(--primary-color);
+      padding-left: 8px;
+    }
+
     /* スタンプカード 2x2 グリッド */
     .stamp-board {
       background: #fff;
@@ -219,6 +232,13 @@
       border: 1px solid var(--border-color);
     }
 
+    /* 無効化カード（今後開催・開催終了）のスタイル */
+    .card.disabled-card {
+      background-color: #f8f9fa;
+      opacity: 0.75;
+      border-color: #d1d8e0;
+    }
+
     .card-title {
       font-size: 1.25rem;
       font-weight: bold;
@@ -248,6 +268,18 @@
       background-color: #fef9e7;
       color: var(--warning-color);
       border: 1px solid var(--warning-color);
+    }
+
+    .stamp-badge.upcoming {
+      background-color: #edf2f7;
+      color: #4a5568;
+      border: 1px solid #cbd5e0;
+    }
+
+    .stamp-badge.ended {
+      background-color: #edf2f7;
+      color: #718096;
+      border: 1px solid #cbd5e0;
     }
 
     .section-box {
@@ -286,6 +318,12 @@
       border-radius: 6px;
       font-size: 0.95rem;
       background-color: #fff;
+    }
+
+    select:disabled {
+      background-color: #e9ecef;
+      color: #6c757d;
+      cursor: not-allowed;
     }
 
     button {
@@ -330,7 +368,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.6); /* 少し暗めにして没入感を出す */
+      background: rgba(0, 0, 0, 0.6);
       z-index: 1000;
       justify-content: center;
       align-items: center;
@@ -374,7 +412,7 @@
       color: #333;
     }
 
-    /* ★追加：全画面ローディング（くるくる）用のスタイル */
+    /* 全画面ローディング用スタイル */
     #processing-overlay { z-index: 2000; }
     .spinner-container {
       display: flex;
@@ -429,7 +467,7 @@
     </div>
   </div>
 
-  <!-- ★追加：全画面処理中ローディング -->
+  <!-- 全画面処理中ローディング -->
   <div id="processing-overlay" class="modal-overlay">
     <div class="spinner-container">
       <div class="spinner"></div>
@@ -440,7 +478,6 @@
   </div>
 
   <script>
-    // ★設定項目（元のまま維持）
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec"; 
     const LIFF_ID = "2011577734-Ymuphm2J"; 
 
@@ -451,7 +488,6 @@
     let isAdminMode = false;
     let pendingBookingData = null;
 
-    // 日時文字列から日付のみ（MM/DD）を抽出するヘルパー関数
     function formatDateOnly(dateStr) {
       if (!dateStr) return "";
       
@@ -492,7 +528,6 @@
       }
     }
 
-    // ★追加：全画面ローディングの表示/非表示関数
     function showProcessing(message = "処理中...<br><small>（約10秒ほどかかります）</small>") {
       document.getElementById("processing-message").innerHTML = message;
       document.getElementById("processing-overlay").classList.add("active");
@@ -587,8 +622,13 @@
     function renderApp() {
       const container = document.getElementById("content");
       
-      const eventKeys = Object.keys(masterEvents);
-      if (eventKeys.length === 0) {
+      // 条件：A列（イベントID＝キー）とB列（イベント名＝event.name）が入っているもののみ抽出
+      const validEventKeys = Object.keys(masterEvents).filter(eventId => {
+        const ev = masterEvents[eventId];
+        return eventId && ev && ev.name && ev.name.trim() !== "";
+      });
+
+      if (validEventKeys.length === 0) {
         container.innerHTML = "<p style='text-align:center;'>現在登録されている上映イベントはありません。</p>";
         return;
       }
@@ -606,13 +646,13 @@
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
 
-      // --- スタンプラリーボードの生成 ---
+      // --- スタンプラリーボードの生成 (最大4つ) ---
       const stampBoard = document.createElement("div");
       stampBoard.className = "stamp-board";
       
       let gridCellsHtml = "";
       for (let i = 0; i < 4; i++) {
-        const eventId = eventKeys[i];
+        const eventId = validEventKeys[i];
         if (eventId) {
           const event = masterEvents[eventId];
           const isStamped = userStamps.includes(eventId);
@@ -643,50 +683,78 @@
       `;
       stampsContainer.appendChild(stampBoard);
 
-      // --- 各作品の予約・クイズカードの生成 ---
-      eventKeys.forEach(eventId => {
+      // --- 「上映予約・日程」タブのセクション分け ---
+      // 1. 受付中 / 今後開催 セクション
+      const activeOrUpcomingTitle = document.createElement("div");
+      activeOrUpcomingTitle.className = "section-header-title";
+      activeOrUpcomingTitle.innerHTML = "📅 受付中／今後開催";
+      bookingContainer.appendChild(activeOrUpcomingTitle);
+
+      const activeOrUpcomingKeys = validEventKeys.filter(eventId => {
+        const status = masterEvents[eventId].status;
+        return status !== "開催終了"; // 「受付中」「今後開催」、あるいは未指定のものはここへ
+      });
+
+      if (activeOrUpcomingKeys.length === 0) {
+        const emptyMsg = document.createElement("p");
+        emptyMsg.style.cssText = "font-size:0.85rem; color:#666; margin-left:4px; margin-bottom:16px;";
+        emptyMsg.innerText = "現在受付中・今後開催のイベントはありません。";
+        bookingContainer.appendChild(emptyMsg);
+      } else {
+        activeOrUpcomingKeys.forEach(eventId => {
+          renderBookingCard(eventId, bookingContainer);
+        });
+      }
+
+      // 2. 開催終了 セクション
+      const endedTitle = document.createElement("div");
+      endedTitle.className = "section-header-title";
+      endedTitle.innerHTML = "🔒 開催終了";
+      bookingContainer.appendChild(endedTitle);
+
+      const endedKeys = validEventKeys.filter(eventId => {
+        return masterEvents[eventId].status === "開催終了";
+      });
+
+      if (endedKeys.length === 0) {
+        const emptyMsg = document.createElement("p");
+        emptyMsg.style.cssText = "font-size:0.85rem; color:#666; margin-left:4px; margin-bottom:16px;";
+        emptyMsg.innerText = "終了したイベントはありません。";
+        bookingContainer.appendChild(emptyMsg);
+      } else {
+        endedKeys.forEach(eventId => {
+          renderBookingCard(eventId, bookingContainer);
+        });
+      }
+
+      // --- クイズ・スタンプカード（スタンプタブ用） ---
+      validEventKeys.forEach(eventId => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
-        const bookedDateRaw = userBookings[eventId];
-        const formattedDateOnly = formatDateOnly(bookedDateRaw);
+        const status = event.status || "受付中";
 
-        // 1. 予約カード
-        const bookingCard = document.createElement("div");
-        bookingCard.className = "card";
-
-        let bookingHtml = `
-          <div class="card-title">${escapeHtml(event.name)}</div>
-          <div class="section-box">
-            <div class="section-title">📅 参加日程の選択</div>
-            <div class="booking-status">
-              ${bookedDateRaw ? `現在の予約: <strong>${escapeHtml(formattedDateOnly)}</strong>` : '現在の予約: 未予約'}
-            </div>
-            <label for="date-select-${eventId}">参加可能日時を選択:</label>
-            <select id="date-select-${eventId}">
-              ${event.dates.length > 0 
-                ? event.dates.map(d => `<option value="${escapeHtml(d)}" ${d === bookedDateRaw ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')
-                : '<option value="">日程未定</option>'
-              }
-            </select>
-            <button onclick="confirmBookingPrompt('${eventId}')">${bookedDateRaw ? '予約日程を変更する' : 'この日程で予約する'}</button>
-          </div>
-        `;
-
-        bookingCard.innerHTML = bookingHtml;
-        bookingContainer.appendChild(bookingCard);
-
-        // 2. クイズ・スタンプカード
         const stampCard = document.createElement("div");
-        stampCard.className = "card";
+        stampCard.className = `card ${status === '開催終了' || status === '今後開催' ? 'disabled-card' : ''}`;
         
+        let badgeClass = 'not-got';
+        let badgeText = '📌 未出席 / スタンプ未獲得';
+        if (isStamped) {
+          badgeClass = 'got';
+          badgeText = '✅ スタンプ獲得済み（出席完了）';
+        } else if (status === '今後開催') {
+          badgeClass = 'upcoming';
+          badgeText = '⏳ 今後開催';
+        } else if (status === '開催終了') {
+          badgeClass = 'ended';
+          badgeText = '🔒 開催終了';
+        }
+
         let stampHtml = `
           <div class="card-title">${escapeHtml(event.name)}</div>
-          <span class="stamp-badge ${isStamped ? 'got' : 'not-got'}">
-            ${isStamped ? '✅ スタンプ獲得済み（出席完了）' : '📌 未出席 / スタンプ未獲得'}
-          </span>
+          <span class="stamp-badge ${badgeClass}">${badgeText}</span>
         `;
 
-        if (!isStamped) {
+        if (!isStamped && status === '受付中') {
           stampHtml += `
             <div class="section-box">
               <div class="section-title">💡 当日クイズ（正解でスタンプGET）</div>
@@ -712,6 +780,53 @@
         stampCard.innerHTML = stampHtml;
         stampsContainer.appendChild(stampCard);
       });
+    }
+
+    // 予約カードを生成する共通ヘルパー関数
+    function renderBookingCard(eventId, container) {
+      const event = masterEvents[eventId];
+      const bookedDateRaw = userBookings[eventId];
+      const formattedDateOnly = formatDateOnly(bookedDateRaw);
+      const status = event.status || "受付中"; // デフォルトは受付中扱い
+
+      const isUpcoming = (status === "今後開催");
+      const isEnded = (status === "開催終了");
+      const isDisabled = isUpcoming || isEnded;
+
+      const bookingCard = document.createElement("div");
+      bookingCard.className = `card ${isDisabled ? 'disabled-card' : ''}`;
+
+      let badgeHtml = '';
+      if (isUpcoming) {
+        badgeHtml = '<span class="stamp-badge upcoming" style="margin-bottom: 10px;">⏳ 今後開催</span>';
+      } else if (isEnded) {
+        badgeHtml = '<span class="stamp-badge ended" style="margin-bottom: 10px;">🔒 開催終了</span>';
+      }
+
+      let bookingHtml = `
+        <div class="card-title">${escapeHtml(event.name)}</div>
+        ${badgeHtml}
+        <div class="section-box" style="${isDisabled ? 'background-color: #eaedf0;' : ''}">
+          <div class="section-title">📅 参加日程の選択</div>
+          <div class="booking-status">
+            ${bookedDateRaw ? `現在の予約: <strong>${escapeHtml(formattedDateOnly)}</strong>` : '現在の予約: 未予約'}
+          </div>
+          <label for="date-select-${eventId}">参加可能日時を選択:</label>
+          <select id="date-select-${eventId}" ${isDisabled ? 'disabled' : ''}>
+            ${event.dates.length > 0 
+              ? event.dates.map(d => `<option value="${escapeHtml(d)}" ${d === bookedDateRaw ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')
+              : '<option value="">日程未定</option>'
+            }
+          </select>
+          ${!isDisabled 
+            ? `<button onclick="confirmBookingPrompt('${eventId}')">${bookedDateRaw ? '予約日程を変更する' : 'この日程で予約する'}</button>`
+            : `<button disabled style="background-color: #cbd5e0; color: #718096;">${isUpcoming ? '今後開催のため予約不可' : '受付終了'}</button>`
+          }
+        </div>
+      `;
+
+      bookingCard.innerHTML = bookingHtml;
+      container.appendChild(bookingCard);
     }
 
     function switchTab(tabName) {
@@ -754,13 +869,11 @@
       pendingBookingData = null;
     }
 
-    // ★変更：ローディング表示を追加し、待機するように修正
     async function executeBooking() {
       if (!pendingBookingData) return;
       const { eventId, selectedDate } = pendingBookingData;
       closeModal();
 
-      // ローディング画面を表示
       showProcessing("予約を確定しています...<br><small>（約10秒ほどかかります）</small>");
 
       const payload = {
@@ -774,18 +887,18 @@
       const success = await sendPost(payload);
       if (success) {
         alert(`「${masterEvents[eventId].name}」を ${selectedDate} で予約完了しました！`);
-        // 成功したら画面をリセットして再読み込み
         resetToInitialLoading();
         hideProcessing();
         await loadStatus();
       } else {
-        hideProcessing(); // エラー時は元に戻す
+        hideProcessing();
       }
     }
 
-    // ★変更：クイズ回答時もローディングを挟む
     async function submitAnswer(eventId) {
-      const inputVal = document.getElementById(`answer-input-${eventId}`).value.trim();
+      const inputElem = document.getElementById(`answer-input-${eventId}`);
+      if (!inputElem) return;
+      const inputVal = inputElem.value.trim();
       const correctAnswer = masterEvents[eventId].answer;
 
       if (!inputVal) {
@@ -816,7 +929,6 @@
       }
     }
 
-    // ★変更：リアクション送信時もローディングを挟む
     async function sendReaction(eventId, reaction) {
       showProcessing("リアクションを送信中...");
       const payload = {
@@ -835,7 +947,6 @@
       }
     }
 
-    // ★変更：sendPostが成功したかどうか(true/false)を返すように修正
     async function sendPost(payload) {
       try {
         await fetch(GAS_URL, {
@@ -851,7 +962,6 @@
       }
     }
 
-    // 更新完了後にUIを初期ローディング表示に戻すための補助関数
     function resetToInitialLoading() {
       document.getElementById("content").innerHTML = `
         <div class="loading-container">
