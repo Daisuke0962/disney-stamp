@@ -534,7 +534,14 @@
 
       try {
         const idToken = liff.getIDToken();
-        const response = await fetch(`${GAS_URL}?action=GET_STATUS&idToken=${encodeURIComponent(idToken)}`);
+        const response = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({
+            action: "GET_STATUS",
+            idToken: idToken
+          })
+        });
         
         clearInterval(progressTimer);
         if (!response.ok) throw new Error(`HTTPエラー Status: ${response.status}`);
