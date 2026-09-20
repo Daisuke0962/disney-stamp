@@ -543,7 +543,9 @@
 
         if (!data.ok) {
           if (data.error === 'unauthorized') {
-            liff.login();
+            // 認証情報が古いためセッションをクリアして再ログインさせる
+            liff.logout();
+            showError("認証の有効期限が切れました。ボタンを押して再ログインしてください。", "unauthorized");
             return;
           }
           throw new Error(data.error || "データ取得失敗");
@@ -1061,7 +1063,9 @@
         });
         const data = await res.json();
         if (data.error === "unauthorized") {
-          liff.login();
+          alert("ログインの有効期限が切れました。ページを再読み込みします。");
+          liff.logout();
+          location.reload();
           return { ok: false, error: "unauthorized" };
         }
         return data;
