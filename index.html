@@ -4,11 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>シェアハウス 上映会スタンプラリー</title>
-  <!-- Google Fonts: Kaisei Opti の読み込み -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kaisei+Opti&display=swap" rel="stylesheet">
-  <!-- LIFF SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     :root {
@@ -22,13 +20,10 @@
       --border-color: #e1e8ed;
     }
 
-    * { 
-      font-family: inherit;
-      box-sizing: border-box; 
-    }
+    * { font-family: inherit; box-sizing: border-box; }
 
     body {
-      font-family:'Kaisei Opti', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Kaisei Opti', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-color);
       margin: 0;
@@ -36,10 +31,7 @@
       padding-bottom: 50px;
     }
 
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-    }
+    .container { max-width: 600px; margin: 0 auto; }
 
     .header {
       text-align: center;
@@ -50,11 +42,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
-    .header h1 {
-      font-size: 1.4rem;
-      margin: 0 0 8px 0;
-      color: var(--primary-color);
-    }
+    .header h1 { font-size: 1.4rem; margin: 0 0 8px 0; color: var(--primary-color); }
 
     .user-info {
       font-size: 0.85rem;
@@ -65,7 +53,6 @@
       display: inline-block;
     }
 
-    /* タブUI */
     .tab-nav {
       display: flex;
       background: #e0e6ed;
@@ -96,7 +83,6 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* セクション見出し */
     .section-header-title {
       font-size: 1.1rem;
       font-weight: bold;
@@ -109,7 +95,6 @@
       padding-left: 8px;
     }
 
-    /* スタンプカード 2x2 グリッド */
     .stamp-board {
       background: #fff;
       border: 2px dashed #bdc3c7;
@@ -150,44 +135,13 @@
       position: relative;
     }
 
-    .stamp-cell.stamped {
-      background-color: #f0fdf4;
-      border-color: var(--success-color);
-    }
+    .stamp-cell.stamped { background-color: #f0fdf4; border-color: var(--success-color); }
+    .stamp-mark { font-size: 2.5rem; line-height: 1; margin-bottom: 4px; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .stamp-empty { font-size: 1.8rem; color: #ccc; font-weight: bold; margin-bottom: 4px; }
+    .stamp-event-name { font-size: 0.7rem; font-weight: bold; color: #555; width: 100%; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2; }
 
-    .stamp-mark {
-      font-size: 2.5rem;
-      line-height: 1;
-      margin-bottom: 4px;
-      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
+    @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-    .stamp-empty {
-      font-size: 1.8rem;
-      color: #ccc;
-      font-weight: bold;
-      margin-bottom: 4px;
-    }
-
-    .stamp-event-name {
-      font-size: 0.7rem;          
-      font-weight: bold;
-      color: #555;
-      width: 100%;
-      word-break: break-all;      
-      display: -webkit-box;
-      -webkit-line-clamp: 2;      
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      line-height: 1.2;
-    }
-
-    @keyframes popIn {
-      0% { transform: scale(0); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    /* ローディング表示 */
     .loading-container {
       text-align: center;
       padding: 40px 20px;
@@ -205,18 +159,8 @@
       height: 12px;
     }
 
-    .progress-bar {
-      height: 100%;
-      width: 0%;
-      background-color: var(--primary-color);
-      transition: width 0.5s ease;
-    }
-
-    .status-text {
-      font-size: 0.9rem;
-      color: #666;
-      margin-bottom: 8px;
-    }
+    .progress-bar { height: 100%; width: 0%; background-color: var(--primary-color); transition: width 0.5s ease; }
+    .status-text { font-size: 0.9rem; color: #666; margin-bottom: 8px; }
 
     .error-box {
       color: var(--accent-color);
@@ -229,7 +173,6 @@
       word-break: break-all;
     }
 
-    /* カード各種 */
     .card {
       background: var(--card-bg);
       border-radius: 12px;
@@ -240,45 +183,23 @@
       overflow: hidden;
     }
 
-    .card.disabled-card {
-      background-color: #f8f9fa;
-      opacity: 0.85;
-      border-color: #d1d8e0;
-    }
+    .card.disabled-card { background-color: #f8f9fa; opacity: 0.85; border-color: #d1d8e0; }
 
-    /* 縦長ポスター画像 UI (修正部分: aspect-ratio 2/3) */
     .poster-box {
       width: 100%;
-      max-width: 300px; /* スマートフォンで広がりすぎないように制限 */
+      max-width: 300px;
       height: 300px;
       aspect-ratio: 2 / 3;
       border-radius: 8px;
       overflow: hidden;
       margin: 0 auto 16px auto;
       background-color: #1a252f;
-      /*display: flex;*/
-      /*align-items: center;*/
-      /*justify-content: center;*/
       box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     }
 
-    .poster-img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center;
-    }
+    .poster-img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+    .card-title { font-size: 1.25rem; font-weight: bold; color: var(--primary-color); margin-top: 0; margin-bottom: 8px; padding-bottom: 4px; }
 
-    .card-title {
-      font-size: 1.25rem;
-      font-weight: bold;
-      color: var(--primary-color);
-      margin-top: 0;
-      margin-bottom: 8px;
-      padding-bottom: 4px;
-    }
-
-    /* タイトル直下に配置するキャッチコピー UI */
     .catchphrase-box {
       background: #fdf6ec;
       border-left: 4px solid #f39c12;
@@ -291,45 +212,13 @@
       line-height: 1.4;
     }
 
-    .stamp-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: bold;
-      margin-bottom: 16px;
-    }
+    .stamp-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; margin-bottom: 16px; }
+    .stamp-badge.got { background-color: #e8f8f5; color: var(--success-color); border: 1px solid var(--success-color); }
+    .stamp-badge.not-got { background-color: #fef9e7; color: var(--warning-color); border: 1px solid var(--warning-color); }
+    .stamp-badge.upcoming { background-color: #edf2f7; color: #4a5568; border: 1px solid #cbd5e0; }
+    .stamp-badge.ended { background-color: #edf2f7; color: #718096; border: 1px solid #cbd5e0; }
 
-    .stamp-badge.got {
-      background-color: #e8f8f5;
-      color: var(--success-color);
-      border: 1px solid var(--success-color);
-    }
-
-    .stamp-badge.not-got {
-      background-color: #fef9e7;
-      color: var(--warning-color);
-      border: 1px solid var(--warning-color);
-    }
-
-    .stamp-badge.upcoming {
-      background-color: #edf2f7;
-      color: #4a5568;
-      border: 1px solid #cbd5e0;
-    }
-
-    .stamp-badge.ended {
-      background-color: #edf2f7;
-      color: #718096;
-      border: 1px solid #cbd5e0;
-    }
-
-    .section-box {
-      background-color: var(--bg-color);
-      padding: 14px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-    }
+    .section-box { background-color: var(--bg-color); padding: 14px; border-radius: 8px; margin-bottom: 16px; }
 
     .admin-box {
       background-color: #fff8e7;
@@ -339,18 +228,9 @@
       margin-top: 16px;
     }
 
-    .admin-box label {
-      font-weight: bold;
-      color: #333;
-      margin-top: 8px;
-      display: block;
-    }
+    .admin-box label { font-weight: bold; color: #333; margin-top: 8px; display: block; }
+    .admin-box input[type="text"], .admin-box select { margin-bottom: 8px; }
 
-    .admin-box input[type="text"], .admin-box select {
-      margin-bottom: 8px;
-    }
-
-    /* 予約者リスト UI */
     .booking-list-box {
       background-color: #ffffff;
       border: 1px solid #e2e8f0;
@@ -368,33 +248,14 @@
       display: flex;
       justify-content: space-between;
     }
+    .booking-item:last-child { border-bottom: none; }
 
-    .booking-item:last-child {
-      border-bottom: none;
-    }
+    .section-title { font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; color: #555; }
+    .booking-status { font-size: 0.9rem; color: var(--success-color); font-weight: bold; margin-bottom: 8px; }
 
-    .section-title {
-      font-size: 0.9rem;
-      font-weight: bold;
-      margin-bottom: 8px;
-      color: #555;
-    }
+    label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 4px; }
 
-    .booking-status {
-      font-size: 0.9rem;
-      color: var(--success-color);
-      font-weight: bold;
-      margin-bottom: 8px;
-    }
-
-    label {
-      display: block;
-      font-size: 0.85rem;
-      color: #666;
-      margin-bottom: 4px;
-    }
-
-    select, input[type="text"], input[type="password"] {
+    select, input[type="text"] {
       width: 100%;
       padding: 10px;
       margin-bottom: 10px;
@@ -402,12 +263,6 @@
       border-radius: 6px;
       font-size: 0.95rem;
       background-color: #fff;
-    }
-
-    select:disabled {
-      background-color: #e9ecef;
-      color: #6c757d;
-      cursor: not-allowed;
     }
 
     button {
@@ -424,13 +279,8 @@
 
     button.secondary { background-color: #7f8c8d; }
     button.admin-btn { background-color: #d35400; }
-    
-    button:disabled {
-      background-color: #bdc3c7;
-      cursor: not-allowed;
-    }
+    button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
 
-    /* 感情タグUI */
     .reaction-section {
       background-color: #fafbfc;
       border: 1px solid #e1e8ed;
@@ -439,12 +289,7 @@
       margin-top: 16px;
     }
 
-    .reaction-subtitle {
-      font-size: 0.85rem;
-      color: #666;
-      text-align: center;
-      margin-bottom: 12px;
-    }
+    .reaction-subtitle { font-size: 0.85rem; color: #666; text-align: center; margin-bottom: 12px; }
 
     .reaction-chips {
       display: flex;
@@ -478,10 +323,7 @@
       transform: translateY(-1px);
     }
 
-    .chip.disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    .chip.disabled { opacity: 0.5; cursor: not-allowed; }
 
     .reaction-submit-btn {
       background-color: #34495e;
@@ -491,19 +333,12 @@
       border-radius: 8px;
     }
 
-    .reaction-submit-btn:disabled {
-      background-color: #cbd5e0;
-      color: #a0aec0;
-    }
+    .reaction-submit-btn:disabled { background-color: #cbd5e0; color: #a0aec0; }
 
-    /* モーダル */
     .modal-overlay {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0, 0, 0, 0.6);
       z-index: 1000;
       justify-content: center;
@@ -522,54 +357,24 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
 
-    .modal-title {
-      font-size: 1.1rem;
-      font-weight: bold;
-      margin-bottom: 12px;
-      color: var(--primary-color);
-    }
-
-    .modal-body {
-      font-size: 0.95rem;
-      color: #444;
-      margin-bottom: 20px;
-      line-height: 1.5;
-    }
-
-    .modal-buttons {
-      display: flex;
-      gap: 10px;
-    }
-
+    .modal-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; color: var(--primary-color); }
+    .modal-body { font-size: 0.95rem; color: #444; margin-bottom: 20px; line-height: 1.5; }
+    .modal-buttons { display: flex; gap: 10px; }
     .modal-buttons button { flex: 1; }
-
-    .btn-cancel {
-      background-color: #e0e0e0;
-      color: #333;
-    }
+    .btn-cancel { background-color: #e0e0e0; color: #333; }
 
     #processing-overlay { z-index: 2000; }
-    .spinner-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: white;
-    }
+    .spinner-container { display: flex; flex-direction: column; align-items: center; color: white; }
     .spinner {
-      width: 48px;
-      height: 48px;
+      width: 48px; height: 48px;
       border: 5px solid rgba(255, 255, 255, 0.3);
       border-top-color: #ffffff;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin-bottom: 16px;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* フッター */
     .footer {
       margin-top: 32px;
       padding-top: 16px;
@@ -577,12 +382,6 @@
       text-align: center;
       font-size: 0.8rem;
       color: #888;
-    }
-
-    .footer-link {
-      color: #888;
-      text-decoration: underline;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -606,26 +405,8 @@
       </div>
     </div>
 
-    <!-- 管理者導線用フッター -->
     <div class="footer">
-      <span id="admin-toggle-link" class="footer-link" onclick="handleAdminToggle()">
-        ⚙️ 編集者（管理者）画面に切り替え
-      </span>
-    </div>
-  </div>
-
-  <!-- 管理者ログインモーダル -->
-  <div id="admin-login-modal" class="modal-overlay">
-    <div class="modal-card">
-      <div class="modal-title">🔐 編集者（管理者）認証</div>
-      <div class="modal-body">
-        編集者画面に入るにはログインIDを入力してください。
-        <input type="password" id="admin-pass-input" style="margin-top: 12px;" placeholder="ログインIDを入力">
-      </div>
-      <div class="modal-buttons">
-        <button class="btn-cancel" onclick="closeAdminLoginModal()">キャンセル</button>
-        <button onclick="submitAdminLogin()">ログイン</button>
-      </div>
+      <span>シェアハウス上映会 スタンプラリー App</span>
     </div>
   </div>
 
@@ -646,20 +427,16 @@
     <div class="spinner-container">
       <div class="spinner"></div>
       <div id="processing-message" style="text-align:center; font-weight:bold; line-height:1.5;">
-        処理中...<br><small>（10秒ほどかかります）</small>
+        処理中...<br><small>（数秒かかります）</small>
       </div>
     </div>
   </div>
 
   <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzxmuyRq6yNirwKO41B9y6Ly65v7Lv5fQIgPV_8qG7bpPHRNBJsvPw1VhBCdDIBS80lcA/exec"; 
+    const GAS_URL = "https://script.google.com/macros/s/YOUR_GAS_DEPLOYMENT_ID/exec"; 
     const LIFF_ID = "2011577734-Ymuphm2J"; 
-    const ADMIN_PASSWORD_HASH = "kacchan"; 
 
-    const LINE_CHANNEL_ACCESS_TOKEN = "jkjwK9N01vkNkTFbSd2Y4+2SxBM6XscRhJBd87IWBhcTx1AcjYIAsbaOJhBY5Ao4WtorEHFVZKxCtvyPkstZfWaDfFFxe9n9yDayXznrY2PIHXOgnlKfR2KMktj8ahqj9GSF3GnwKVISpgkmvhZloAdB04t89/1O/w1cDnyilFU="; 
-    const ADMIN_USER_ID = "Ua6eaaefab3d6ed7ce4736bac19259ea5";
-
-    let currentUser = { userId: "guest", displayName: "ゲスト" };
+    let currentUser = { displayName: "ゲスト" };
     let masterEvents = {};
     let userBookings = {};
     let userStamps = [];
@@ -668,25 +445,15 @@
     let pendingBookingData = null;
 
     const EMOTION_TAGS = [
-      "🥹 感動",
-      "☕️ ほっこり",
-      "🪄 余韻",
-      "💡 発見",
-      "🍃 すっきり",
-      "❤️ 愛おしい",
-      "☕️ 穏やか",
-      "✨ 高揚"
+      "🥹 感動", "☕️ ほっこり", "🪄 余韻", "💡 発見",
+      "🍃 すっきり", "❤️ 愛おしい", "☕️ 穏やか", "✨ 高揚"
     ];
 
     const selectedReactions = {};
 
     function escapeHtml(str) {
       if (typeof str !== 'string') return str || '';
-      return str.replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
     function formatDateOnly(dateStr) {
@@ -726,7 +493,7 @@
       }
     }
 
-    function showProcessing(message = "処理中...<br><small>（約10秒ほどかかります）</small>") {
+    function showProcessing(message = "処理中...") {
       document.getElementById("processing-message").innerHTML = message;
       document.getElementById("processing-overlay").classList.add("active");
     }
@@ -735,101 +502,52 @@
       document.getElementById("processing-overlay").classList.remove("active");
     }
 
-    function handleAdminToggle() {
-      if (isAdminMode) {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('mode');
-        window.location.href = url.toString();
-      } else {
-        document.getElementById("admin-pass-input").value = "";
-        document.getElementById("admin-login-modal").classList.add("active");
-      }
-    }
-
-    function closeAdminLoginModal() {
-      document.getElementById("admin-login-modal").classList.remove("active");
-    }
-
-    function submitAdminLogin() {
-      const pass = document.getElementById("admin-pass-input").value.trim();
-      if (pass === ADMIN_PASSWORD_HASH) {
-        closeAdminLoginModal();
-        const url = new URL(window.location.href);
-        url.searchParams.set('mode', 'admin');
-        window.location.href = url.toString();
-      } else {
-        alert("ログインIDが不正です。");
-      }
-    }
-
     window.onload = async function() {
-      const urlParams = new URLSearchParams(window.location.search);
-      isAdminMode = urlParams.get('mode') === 'admin';
-
-      const adminLinkElem = document.getElementById("admin-toggle-link");
-      if (adminLinkElem) {
-        adminLinkElem.innerText = isAdminMode ? "⚙️ 通常ユーザー画面に戻る" : "⚙️ 編集者（管理者）画面に切り替え";
-      }
-
       updateProgress(20, "LINEアカウント認証中...");
       
       try {
-        if (LIFF_ID && !LIFF_ID.includes("YOUR_")) {
-          await liff.init({ liffId: LIFF_ID });
-          if (liff.isLoggedIn()) {
-            const profile = await liff.getProfile();
-            currentUser.userId = profile.userId;
-            currentUser.displayName = profile.displayName;
-          } else {
-            liff.login({ redirectUri: window.location.href });
-            return;
-          }
-        } else {
-          currentUser.userId = "test_user_01";
-          currentUser.displayName = "開発用ユーザー";
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
         }
+        const profile = await liff.getProfile();
+        currentUser.displayName = profile.displayName;
       } catch (err) {
-        currentUser.userId = "test_user_01";
-        currentUser.displayName = "開発用ユーザー";
+        console.error("LIFF Init Error:", err);
+        showError("LINEログインの初期化に失敗しました。LINEアプリ内から開いてください。");
+        return;
       }
-
-      document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様 ${isAdminMode ? ' (編集者モード)' : ''}`;
 
       updateProgress(30, "サーバーへ接続中...");
       await loadStatus();
     };
 
     async function loadStatus() {
-      if (!GAS_URL || GAS_URL.includes("YOUR_")) {
-        showError("GASのURL（GAS_URL）が未設定です。");
-        return;
-      }
-
       let currentPercent = 30;
       const progressTimer = setInterval(() => {
         if (currentPercent < 85) {
-          currentPercent += 1.5;
-          let msg = "サーバーと通信中...";
-          if (currentPercent > 45) msg = "GASを起動中...";
-          if (currentPercent > 70) msg = "スプレッドシートから最新データを読み込み中...";
-          updateProgress(currentPercent, msg);
+          currentPercent += 2;
+          updateProgress(currentPercent, "最新データを読み込み中...");
         }
-      }, 500);
+      }, 300);
 
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 45000);
-
-        const response = await fetch(`${GAS_URL}?action=GET_STATUS&userId=${encodeURIComponent(currentUser.userId)}`, {
-          signal: controller.signal
-        });
+        const idToken = liff.getIDToken();
+        const response = await fetch(`${GAS_URL}?action=GET_STATUS&idToken=${encodeURIComponent(idToken)}`);
         
-        clearTimeout(timeoutId);
         clearInterval(progressTimer);
-
         if (!response.ok) throw new Error(`HTTPエラー Status: ${response.status}`);
 
         const data = await response.json();
+
+        if (!data.ok) {
+          if (data.error === 'unauthorized') {
+            liff.login();
+            return;
+          }
+          throw new Error(data.error || "データ取得失敗");
+        }
 
         updateProgress(95, "画面を作成中...");
 
@@ -837,15 +555,15 @@
         userBookings = data.userBookings || {};
         userStamps = data.userStamps || [];
         allBookings = data.allBookings || [];
+        isAdminMode = !!data.isAdmin;
+
+        document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様 ${isAdminMode ? ' (管理者)' : ''}`;
 
         updateProgress(100, "完了!");
-        setTimeout(() => {
-          renderApp();
-        }, 300);
+        setTimeout(() => { renderApp(); }, 300);
 
       } catch (err) {
         clearInterval(progressTimer);
-        console.error("データ取得エラー:", err);
         showError("データの読み込みに失敗しました。", err.message);
       }
     }
@@ -876,7 +594,7 @@
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
 
-      // --- スタンプラリーボードの生成 ---
+      // --- スタンプラリーボード ---
       const sortedEventKeysForBoard = [...validEventKeys].sort((a, b) => {
         const aStamped = userStamps.includes(a);
         const bStamped = userStamps.includes(b);
@@ -917,32 +635,22 @@
 
       stampBoard.innerHTML = `
         <div class="stamp-board-title">✨ 上映会スタンプラリー ✨</div>
-        <div class="stamp-grid">
-          ${gridCellsHtml}
-        </div>
+        <div class="stamp-grid">${gridCellsHtml}</div>
       `;
       stampsContainer.appendChild(stampBoard);
 
-      // --- 「上映予約・日程」タブ ---
+      // --- 予約タブ ---
       const activeOrUpcomingTitle = document.createElement("div");
       activeOrUpcomingTitle.className = "section-header-title";
       activeOrUpcomingTitle.innerHTML = "📅 受付中／今後開催";
       bookingContainer.appendChild(activeOrUpcomingTitle);
 
-      const activeOrUpcomingKeys = validEventKeys.filter(eventId => {
-        const status = masterEvents[eventId].status;
-        return status !== "開催終了";
-      });
+      const activeOrUpcomingKeys = validEventKeys.filter(eventId => masterEvents[eventId].status !== "開催終了");
 
       if (activeOrUpcomingKeys.length === 0) {
-        const emptyMsg = document.createElement("p");
-        emptyMsg.style.cssText = "font-size:0.85rem; color:#666; margin-left:4px; margin-bottom:16px;";
-        emptyMsg.innerText = "現在受付中・今後開催のイベントはありません。";
-        bookingContainer.appendChild(emptyMsg);
+        bookingContainer.insertAdjacentHTML('beforeend', '<p style="font-size:0.85rem; color:#666; margin-left:4px;">現在受付中・今後開催のイベントはありません。</p>');
       } else {
-        activeOrUpcomingKeys.forEach(eventId => {
-          renderBookingCard(eventId, bookingContainer);
-        });
+        activeOrUpcomingKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
       }
 
       const endedTitle = document.createElement("div");
@@ -950,22 +658,15 @@
       endedTitle.innerHTML = "🔒 開催終了";
       bookingContainer.appendChild(endedTitle);
 
-      const endedKeys = validEventKeys.filter(eventId => {
-        return masterEvents[eventId].status === "開催終了";
-      });
+      const endedKeys = validEventKeys.filter(eventId => masterEvents[eventId].status === "開催終了");
 
       if (endedKeys.length === 0) {
-        const emptyMsg = document.createElement("p");
-        emptyMsg.style.cssText = "font-size:0.85rem; color:#666; margin-left:4px; margin-bottom:16px;";
-        emptyMsg.innerText = "終了したイベントはありません。";
-        bookingContainer.appendChild(emptyMsg);
+        bookingContainer.insertAdjacentHTML('beforeend', '<p style="font-size:0.85rem; color:#666; margin-left:4px;">終了したイベントはありません。</p>');
       } else {
-        endedKeys.forEach(eventId => {
-          renderBookingCard(eventId, bookingContainer);
-        });
+        endedKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
       }
 
-      // --- スタンプカード詳細＆管理者設定 ---
+      // --- スタンプタブ ---
       validEventKeys.forEach(eventId => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
@@ -991,7 +692,6 @@
         const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
         const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
 
-        // 配置順変更：ポスター -> タイトル -> タイトル直下のキャッチコピー -> バッジ
         let stampHtml = `
           <div class="poster-box">
             <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
@@ -1012,6 +712,7 @@
           `;
         }
 
+        // 管理者モード時のみマスター設定フォームを描画
         if (isAdminMode) {
           const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
           let bookingListHtml = eventBookings.length > 0
@@ -1025,9 +726,9 @@
 
           stampHtml += `
             <div class="admin-box">
-              <div class="section-title" style="color: #d35400;">⚙️ 編集者権限：マスターデータ編集</div>
+              <div class="section-title" style="color: #d35400;">⚙️ 管理者設定：マスター編集</div>
               
-              <label>イベントID（変更不可）:</label>
+              <label>イベントID:</label>
               <input type="text" value="${escapeHtml(eventId)}" disabled style="background:#e9ecef;">
 
               <label>イベント名:</label>
@@ -1036,17 +737,17 @@
               <label>スタンプアイコン絵文字:</label>
               <input type="text" id="edit-icon-${eventId}" value="${escapeHtml(stampIcon)}">
 
-              <label>ポスター画像URL:</label>
+              <label>ポスター画像URL (https://):</label>
               <input type="text" id="edit-image-${eventId}" value="${escapeHtml(event.imageUrl)}" placeholder="https://...">
 
-              <label>本作の魅力（キャッチコピー）:</label>
+              <label>ひとこと魅力:</label>
               <input type="text" id="edit-catchphrase-${eventId}" value="${escapeHtml(event.catchphrase)}">
 
               <label>秘密の質問文:</label>
               <input type="text" id="edit-question-${eventId}" value="${escapeHtml(event.question)}">
 
               <label>正解コード:</label>
-              <input type="text" id="edit-answer-${eventId}" value="${escapeHtml(event.answer)}">
+              <input type="text" id="edit-answer-${eventId}" placeholder="GAS側で保持（変更時のみ入力）">
 
               <label>候補日程①:</label>
               <input type="text" id="edit-date1-${eventId}" value="${escapeHtml(event.dates[0] || '')}">
@@ -1062,47 +763,37 @@
                 <option value="開催終了" ${status === '開催終了' ? 'selected' : ''}>開催終了</option>
               </select>
 
-              <button onclick="saveEventMaster('${eventId}')" class="admin-btn" style="margin-top:10px;">シートに更新内容を保存</button>
+              <button onclick="saveEventMaster('${eventId}')" class="admin-btn" style="margin-top:10px;">更新内容を保存</button>
 
               <hr style="border:none; border-top:1px solid #f39c12; margin:16px 0;">
 
-              <div class="section-title" style="color:#d35400;">📋 このイベントの申込状況一覧 (${eventBookings.length}件)</div>
-              <div class="booking-list-box">
-                ${bookingListHtml}
-              </div>
+              <div class="section-title" style="color:#d35400;">📋 予約一覧 (${eventBookings.length}件)</div>
+              <div class="booking-list-box">${bookingListHtml}</div>
             </div>
           `;
         }
 
-        if (!selectedReactions[eventId]) {
-          selectedReactions[eventId] = new Set();
-        }
-
+        if (!selectedReactions[eventId]) selectedReactions[eventId] = new Set();
         const isReactionDisabled = (status === '今後開催' || status === '開催終了');
 
         stampHtml += `
           <div class="reaction-section">
-            <div class="section-title" style="text-align:center;">✨ 心の動きを記録（何度でも押せるよ！）</div>
-            <div class="reaction-subtitle">観賞後の気持ちに当てはまる感情を選んで送信できます</div>
+            <div class="section-title" style="text-align:center;">✨ 心の動きを記録</div>
+            <div class="reaction-subtitle">観賞後の気持ちを選んで送信できます</div>
             <div class="reaction-chips" id="chips-${eventId}">
               ${EMOTION_TAGS.map(tag => {
                 const isSelected = selectedReactions[eventId].has(tag);
                 return `
-                  <div 
-                    class="chip ${isSelected ? 'selected' : ''} ${isReactionDisabled ? 'disabled' : ''}" 
-                    onclick="toggleEmotionTag('${eventId}', '${escapeHtml(tag)}', ${isReactionDisabled})"
-                  >
+                  <div class="chip ${isSelected ? 'selected' : ''} ${isReactionDisabled ? 'disabled' : ''}" 
+                       onclick="toggleEmotionTag('${eventId}', '${escapeHtml(tag)}',${isReactionDisabled})">
                     ${escapeHtml(tag)}
                   </div>
                 `;
               }).join('')}
             </div>
-            <button 
-              id="reaction-btn-${eventId}" 
-              class="reaction-submit-btn" 
-              onclick="sendMultipleReactions('${eventId}')"
-              ${isReactionDisabled || selectedReactions[eventId].size === 0 ? 'disabled' : ''}
-            >
+            <button id="reaction-btn-${eventId}" class="reaction-submit-btn" 
+                    onclick="sendMultipleReactions('${eventId}')" 
+                    ${isReactionDisabled || selectedReactions[eventId].size === 0 ? 'disabled' : ''}>
               ${isReactionDisabled ? '受付時間外です' : '選択したリアクションを送る'}
             </button>
           </div>
@@ -1128,16 +819,12 @@
       bookingCard.className = `card ${isDisabled ? 'disabled-card' : ''}`;
 
       let badgeHtml = '';
-      if (isUpcoming) {
-        badgeHtml = '<span class="stamp-badge upcoming" style="margin-bottom: 10px;">⏳ 今後開催</span>';
-      } else if (isEnded) {
-        badgeHtml = '<span class="stamp-badge ended" style="margin-bottom: 10px;">🔒 開催終了</span>';
-      }
+      if (isUpcoming) badgeHtml = '<span class="stamp-badge upcoming">⏳ 今後開催</span>';
+      if (isEnded) badgeHtml = '<span class="stamp-badge ended">🔒 開催終了</span>';
 
       const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
       const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
 
-      // 配置順変更：ポスター -> タイトル -> タイトル直下のキャッチコピー
       let bookingHtml = `
         <div class="poster-box">
           <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
@@ -1183,37 +870,23 @@
 
     function toggleEmotionTag(eventId, tag, isDisabled) {
       if (isDisabled) return;
-
-      if (!selectedReactions[eventId]) {
-        selectedReactions[eventId] = new Set();
-      }
+      if (!selectedReactions[eventId]) selectedReactions[eventId] = new Set();
 
       const set = selectedReactions[eventId];
-      if (set.has(tag)) {
-        set.delete(tag);
-      } else {
-        set.add(tag);
-      }
+      if (set.has(tag)) set.delete(tag);
+      else set.add(tag);
 
       const container = document.getElementById(`chips-${eventId}`);
       const btn = document.getElementById(`reaction-btn-${eventId}`);
       
       if (container) {
-        const chips = container.querySelectorAll('.chip');
-        chips.forEach(chip => {
+        container.querySelectorAll('.chip').forEach(chip => {
           if (chip.innerText.trim() === tag) {
-            if (set.has(tag)) {
-              chip.classList.add('selected');
-            } else {
-              chip.classList.remove('selected');
-            }
+            chip.classList.toggle('selected', set.has(tag));
           }
         });
       }
-
-      if (btn) {
-        btn.disabled = set.size === 0;
-      }
+      if (btn) btn.disabled = set.size === 0;
     }
 
     function confirmBookingPrompt(eventId) {
@@ -1244,56 +917,28 @@
       pendingBookingData = null;
     }
 
-    async function sendDirectLineNotification(textMessage) {
-      try {
-        const targetUrl = "https://api.line.me/v2/bot/message/push";
-        const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(targetUrl);
-
-        await fetch(proxyUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + LINE_CHANNEL_ACCESS_TOKEN
-          },
-          body: JSON.stringify({
-            to: ADMIN_USER_ID,
-            messages: [{ type: "text", text: textMessage }]
-          })
-        });
-      } catch (e) {
-        console.warn("Direct LINE Push Alert:", e);
-      }
-    }
-
     async function executeBooking() {
       if (!pendingBookingData) return;
       const { eventId, selectedDate } = pendingBookingData;
       closeModal();
 
-      showProcessing("予約を確定しています...<br><small>（約10秒ほどかかります）</small>");
-
-      const eventName = masterEvents[eventId].name;
-      const stampIcon = masterEvents[eventId].stampIcon || '🎬';
-
-      const lineNoticeText = `🎬 【上映会 参加予約通知】\n・参加者: ${currentUser.displayName}\n・作品名: ${eventName} ${stampIcon}\n・予約日時: ${selectedDate}`;
-      sendDirectLineNotification(lineNoticeText);
+      showProcessing("予約を確定しています...");
 
       const payload = {
         action: "BOOKING",
-        userId: currentUser.userId,
-        displayName: currentUser.displayName,
         eventId: eventId,
         detail: selectedDate
       };
 
-      const success = await sendPost(payload);
-      if (success) {
-        alert(`「${eventName}」を ${selectedDate} で予約完了しました！`);
+      const res = await sendPost(payload);
+      hideProcessing();
+
+      if (res.ok) {
+        alert(`「${masterEvents[eventId].name}」を ${selectedDate} で予約完了しました！`);
         resetToInitialLoading();
-        hideProcessing();
         await loadStatus();
       } else {
-        hideProcessing();
+        alert("予約処理に失敗しました: " + (res.error || ""));
       }
     }
 
@@ -1301,31 +946,31 @@
       const inputElem = document.getElementById(`answer-input-${eventId}`);
       if (!inputElem) return;
       const inputVal = inputElem.value.trim();
-      const correctAnswer = masterEvents[eventId].answer;
 
       if (!inputVal) {
         alert("回答を入力してください。");
         return;
       }
 
-      if (inputVal === correctAnswer) {
-        showProcessing("スタンプを押印しています...<br><small>（約10秒ほどかかります）</small>");
-        const payload = {
-          action: "CHECK_STAMP",
-          userId: currentUser.userId,
-          displayName: currentUser.displayName,
-          eventId: eventId
-        };
-        const success = await sendPost(payload);
-        
-        if (success) {
-          alert("🎉 正解です！スタンプを獲得しました！");
-          resetToInitialLoading();
-          hideProcessing();
-          await loadStatus();
+      showProcessing("回答を判定中...");
+
+      const payload = {
+        action: "CHECK_STAMP",
+        eventId: eventId,
+        answer: inputVal
+      };
+
+      const res = await sendPost(payload);
+      hideProcessing();
+
+      if (res.ok) {
+        if (res.already) {
+          alert("既にスタンプを獲得済みです。");
         } else {
-          hideProcessing();
+          alert("🎉 正解です！スタンプを獲得しました！");
         }
+        resetToInitialLoading();
+        await loadStatus();
       } else {
         alert("❌ 残念！回答が正しくありません。");
       }
@@ -1348,7 +993,7 @@
         return;
       }
 
-      showProcessing("マスターデータ・スプレッドシートを更新中...");
+      showProcessing("マスターデータを更新中...");
       
       const payload = {
         action: "UPDATE_EVENT_MASTER",
@@ -1365,66 +1010,64 @@
         status: status
       };
 
-      const success = await sendPost(payload);
-      if (success) {
-        alert("スプレッドシートへの更新が完了しました！");
+      const res = await sendPost(payload);
+      hideProcessing();
+
+      if (res.ok) {
+        alert("マスターデータの更新が完了しました！");
         resetToInitialLoading();
-        hideProcessing();
         await loadStatus();
       } else {
-        hideProcessing();
+        alert("更新権限がないか、エラーが発生しました: " + (res.error || ""));
       }
     }
 
     async function sendMultipleReactions(eventId) {
       const set = selectedReactions[eventId];
-      if (!set || set.size === 0) {
-        alert("リアクションを選択してください。");
-        return;
-      }
+      if (!set || set.size === 0) return;
 
       const tagsArray = Array.from(set);
-      const reactionString = tagsArray.join(", ");
-
       showProcessing("リアクションを送信中...");
       
       const payload = {
         action: "REACTION",
-        userId: currentUser.userId,
-        displayName: currentUser.displayName,
         eventId: eventId,
-        detail: reactionString,
         reactions: tagsArray
       };
       
-      const success = await sendPost(payload);
+      const res = await sendPost(payload);
       hideProcessing();
       
-      if (success) {
-        alert(`リアクション（${reactionString}）を送信しました！`);
+      if (res.ok) {
+        alert(`リアクションを送信しました！`);
         set.clear();
         
         const container = document.getElementById(`chips-${eventId}`);
         const btn = document.getElementById(`reaction-btn-${eventId}`);
-        if (container) {
-          container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
-        }
+        if (container) container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
         if (btn) btn.disabled = true;
+      } else {
+        alert("送信エラーが発生しました。");
       }
     }
 
     async function sendPost(payload) {
       try {
-        await fetch(GAS_URL, {
+        payload.idToken = liff.getIDToken();
+        const res = await fetch(GAS_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain" },
           body: JSON.stringify(payload)
         });
-        return true;
+        const data = await res.json();
+        if (data.error === "unauthorized") {
+          liff.login();
+          return { ok: false, error: "unauthorized" };
+        }
+        return data;
       } catch (err) {
         console.error("通信エラー:", err);
-        alert("エラーが発生しました。通信環境をご確認ください。");
-        return false;
+        return { ok: false, error: err.toString() };
       }
     }
 
