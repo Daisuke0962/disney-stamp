@@ -544,6 +544,47 @@
 
     const selectedReactions = {};
 
+    // ★ タブ切り替え関数を追加
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+      if (tabName === 'booking') {
+        document.getElementById('tab-booking').classList.add('active');
+        document.getElementById('btn-tab-booking').classList.add('active');
+      } else if (tabName === 'stamps') {
+        document.getElementById('tab-stamps').classList.add('active');
+        document.getElementById('btn-tab-stamps').classList.add('active');
+      }
+    }
+
+    function toggleEmotionTag(eventId, tag, isDisabled) {
+      if (isDisabled) return;
+      if (!selectedReactions[eventId]) selectedReactions[eventId] = new Set();
+      
+      const set = selectedReactions[eventId];
+      if (set.has(tag)) {
+        set.delete(tag);
+      } else {
+        set.add(tag);
+      }
+
+      const container = document.getElementById(`chips-${eventId}`);
+      const btn = document.getElementById(`reaction-btn-${eventId}`);
+      
+      if (container) {
+        container.querySelectorAll('.chip').forEach(chipElem => {
+          if (chipElem.innerText.trim() === tag) {
+            chipElem.classList.toggle('selected', set.has(tag));
+          }
+        });
+      }
+
+      if (btn) {
+        btn.disabled = (set.size === 0);
+      }
+    }
+
     function escapeHtml(str) {
       if (typeof str !== 'string') return str || '';
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -833,7 +874,6 @@
           `;
         }
 
-        // 管理者モード時のみマスター設定フォームを描画
         if (isAdminMode) {
           const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
           let bookingListHtml = eventBookings.length > 0
@@ -934,7 +974,7 @@
 
       const isUpcoming = (status === "今後開催");
       const isEnded = (status === "開催終了");
-      const isAccepting = (status === "受付中"); // ★ 受付中フラグ
+      const isAccepting = (status === "受付中");
       const isDisabled = isUpcoming || isEnded;
 
       const bookingCard = document.createElement("div");
@@ -947,7 +987,6 @@
       const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
       const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
 
-      // --- 日程ごとの参加者を抽出 ---
       const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
 
       let dateRowsHtml = '';
@@ -962,7 +1001,6 @@
           const accordionId = `acc-${eventId}-${idx}`;
 
           let buttonHtml = '';
-          // ★ 条件追加: ステータスが「受付中」のカードのみ参加者ボタン/アコーディオンを表示
           if (isAccepting) {
             if (count > 0) {
               buttonHtml = `
@@ -1001,13 +1039,11 @@
         dateRowsHtml = '<div style="font-size:0.85rem; color:#888;">日程未定</div>';
       }
 
-      // プルダウン選択肢の生成
       let optionsHtml = `<option value="">-- 日程を選択してください --</option>`;
       if (event.dates && event.dates.length > 0) {
         optionsHtml += event.dates.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
       }
       
-      // ★ 要件: 予約中のユーザーのみキャンセル選択肢をプールダウンにも追加
       if (bookedDateRaw) {
         optionsHtml += `<option value="CANCEL" style="color:red;">🔴 予約をキャンセルする</option>`;
       }
@@ -1015,15 +1051,13 @@
       let actionButtonsHtml = '';
       if (!isDisabled) {
         if (bookedDateRaw) {
-          // 予約済みの場合は「変更ボタン」と「キャンセルボタン」を横並びで表示
           actionButtonsHtml = `
             <div class="btn-group">
-              <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')" style="flex:2;">日程を変更</button>
-              <button class="btn-danger" onclick="triggerDirectCancel('${eventId}')" style="flex:1;">予約を取消</button>
+              <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')" style="flex:2;">予約日程を変更</button>
+              <button class="btn-danger" onclick="triggerDirectCancel('${eventId}')" style="flex:1;">キャンセル</button>
             </div>
           `;
         } else {
-          // 未予約の場合
           actionButtonsHtml = `
             <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')">この日程で予約する</button>
           `;
@@ -1091,7 +1125,6 @@
       }
     }
 
-    // キャンセルボタンを直接押した際のトリガー
     function triggerDirectCancel(eventId) {
       const selectElem = document.getElementById(`date-select-${eventId}`);
       if (selectElem) selectElem.value = "CANCEL";
