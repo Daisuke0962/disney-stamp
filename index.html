@@ -1018,8 +1018,8 @@
           // 予約済みの場合は「変更ボタン」と「キャンセルボタン」を横並びで表示
           actionButtonsHtml = `
             <div class="btn-group">
-              <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')" style="flex:2;">予約日程を変更</button>
-              <button class="btn-danger" onclick="triggerDirectCancel('${eventId}')" style="flex:1;">キャンセル</button>
+              <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')" style="flex:2;">日程を変更する</button>
+              <button class="btn-danger" onclick="triggerDirectCancel('${eventId}')" style="flex:1;">キャンセルする</button>
             </div>
           `;
         } else {
