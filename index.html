@@ -534,6 +534,13 @@
 
       try {
         const idToken = liff.getIDToken();
+        if (!idToken) {
+          clearInterval(progressTimer);
+          // idTokenが取れない場合はセッションを再構築するため再ログイン
+          liff.login();
+          return;
+        }
+        
         const response = await fetch(GAS_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain" },
@@ -550,9 +557,8 @@
 
         if (!data.ok) {
           if (data.error === 'unauthorized') {
-            // 認証情報が古いためセッションをクリアして再ログインさせる
-            liff.logout();
-            showError("認証の有効期限が切れました。ボタンを押して再ログインしてください。", "unauthorized");
+            //トークンを再取得して再試行させる
+            showError("認証トークンの検証に失敗しました。LINEアプリから再度お試しいただくか、再ログインしてください。", "unauthorized");
             return;
           }
           throw new Error(data.error || "データ取得失敗");
