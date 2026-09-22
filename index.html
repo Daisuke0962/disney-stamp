@@ -95,6 +95,17 @@
       padding-left: 8px;
     }
 
+    /* ガイドボックス */
+    .guide-box {
+      background: #fffbe6;
+      border: 1px solid #ffe58f;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
     .stamp-board {
       background: #fff;
       border: 2px dashed #bdc3c7;
@@ -219,6 +230,21 @@
     .stamp-badge.ended { background-color: #edf2f7; color: #718096; border: 1px solid #cbd5e0; }
 
     .section-box { background-color: var(--bg-color); padding: 14px; border-radius: 8px; margin-bottom: 16px; }
+
+    /* 全開催日時の一覧表示ボックス */
+    .all-dates-box {
+      background: #ffffff;
+      border: 1px solid #e1e8ed;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin: 8px 0 12px 0;
+    }
+    .all-dates-box ul {
+      margin: 4px 0 0 0;
+      padding-left: 18px;
+      font-size: 0.85rem;
+      color: #444;
+    }
 
     .admin-box {
       background-color: #fff8e7;
@@ -539,7 +565,6 @@
         const idToken = liff.getIDToken();
         if (!idToken) {
           clearInterval(progressTimer);
-          // idTokenが取れない場合はエラー表示
           showError("認証トークンが取得できませんでした。ページを再読み込みするか、LINEアプリ内から再開してください。");
           return;
         }
@@ -560,7 +585,6 @@
 
         if (!data.ok) {
           if (data.error === 'unauthorized') {
-            //トークンを再取得して再試行させる
             showError("認証トークンの検証に失敗しました。LINEアプリから再度お試しいただくか、再ログインしてください。", "unauthorized");
             return;
           }
@@ -620,6 +644,19 @@
         if (!aStamped && bStamped) return 1;
         return 0;
       });
+
+      // 【要件3】スタンプカードタブの使い方ガイドを追加
+      const guideBox = document.createElement("div");
+      guideBox.className = "guide-box";
+      guideBox.innerHTML = `
+        <div style="font-weight: bold; color: #d48806; margin-bottom: 4px;">💡 スタンプの集め方</div>
+        <ol style="margin: 0; padding-left: 18px; color: #555;">
+          <li>上映会に参加して、会場で発表される<strong>「クイズのキーワード」</strong>をチェック！</li>
+          <li>下のアドカードから回答を入力して送信するとスタンプを獲得できます🎉</li>
+          <li>観賞後は「心の動き」タグを選んで感想の共有もできます✨</li>
+        </ol>
+      `;
+      stampsContainer.appendChild(guideBox);
 
       const stampBoard = document.createElement("div");
       stampBoard.className = "stamp-board";
@@ -843,6 +880,20 @@
       const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
       const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
 
+      // 【要件2】登録されている全候補日程のリスト化
+      const allDatesListHtml = (event.dates && event.dates.length > 0)
+        ? event.dates.map(d => `<li>${escapeHtml(d)}</li>`).join('')
+        : '<li>日程未定</li>';
+
+      // 【要件1】デフォルト選択肢を「-- 日程を選択してください --」にする
+      const optionsHtml = `
+        <option value="">-- 日程を選択してください --</option>
+        ${event.dates && event.dates.length > 0 
+          ? event.dates.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('')
+          : ''
+        }
+      `;
+
       let bookingHtml = `
         <div class="poster-box">
           <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
@@ -852,16 +903,23 @@
         ${badgeHtml}
         <div class="section-box" style="${isDisabled ? 'background-color: #eaedf0;' : ''}">
           <div class="section-title">📅 参加日程の選択</div>
+          
           <div class="booking-status">
             ${bookedDateRaw ? `現在の予約: <strong>${escapeHtml(formattedDateOnly)}</strong>` : '現在の予約: 未予約'}
           </div>
+
+          <!-- 【要件2】スプレッドシートにある予約可能日時一覧を表示 -->
+          <div class="all-dates-box">
+            <div style="font-size:0.8rem; font-weight:bold; color:#555;">🗓 予約可能日時一覧:</div>
+            <ul>${allDatesListHtml}</ul>
+          </div>
+
           <label for="date-select-${eventId}">参加可能日時を選択:</label>
+          <!-- 【要件1】初期状態は未選択 ("") -->
           <select id="date-select-${eventId}" ${isDisabled ? 'disabled' : ''}>
-            ${event.dates && event.dates.length > 0 
-              ? event.dates.map(d => `<option value="${escapeHtml(d)}" ${d === bookedDateRaw ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')
-              : '<option value="">日程未定</option>'
-            }
+            ${optionsHtml}
           </select>
+
           ${!isDisabled 
             ? `<button onclick="confirmBookingPrompt('${eventId}')">${bookedDateRaw ? '予約日程を変更する' : 'この日程で予約する'}</button>`
             : `<button disabled style="background-color: #cbd5e0; color: #718096;">${isUpcoming ? '今後開催のため予約不可' : '受付終了'}</button>`
@@ -911,6 +969,7 @@
       const selectElem = document.getElementById(`date-select-${eventId}`);
       const selectedDate = selectElem ? selectElem.value : "";
       
+      // 未選択バリデーション
       if (!selectedDate) {
         alert("予約する日程を選択してください。");
         return;
