@@ -914,7 +914,6 @@
         ? event.dates.map(d => `<li>${escapeHtml(d)}</li>`).join('')
         : '<li>日程未定</li>';
 
-      // 【追加要件1】キャンセル選択肢を追加
       let optionsHtml = `<option value="">-- 日程を選択してください --</option>`;
       if (event.dates && event.dates.length > 0) {
         optionsHtml += event.dates.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
@@ -923,7 +922,6 @@
         optionsHtml += `<option value="CANCEL" style="color:red;">-- キャンセル（予約を取り消す） --</option>`;
       }
 
-      // 【追加要件2】予約中日程の参加メンバー一覧を作成
       let membersHtml = '';
       if (bookedDateRaw) {
         const sameDateBookings = allBookings.filter(b => 
