@@ -231,7 +231,6 @@
 
     .section-box { background-color: var(--bg-color); padding: 14px; border-radius: 8px; margin-bottom: 16px; }
 
-    /* 全開催日時の一覧表示ボックス */
     .all-dates-box {
       background: #ffffff;
       border: 1px solid #e1e8ed;
@@ -244,6 +243,35 @@
       padding-left: 18px;
       font-size: 0.85rem;
       color: #444;
+    }
+
+    /* 参加メンバー表示ボックス */
+    .members-box {
+      background: #eef2f5;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin: 8px 0 12px 0;
+      font-size: 0.85rem;
+    }
+    .members-title {
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-bottom: 4px;
+    }
+    .members-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .member-tag {
+      background: #ffffff;
+      border: 1px solid #cbd5e0;
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 0.78rem;
+      color: #2d3748;
     }
 
     .admin-box {
@@ -301,8 +329,10 @@
       font-size: 0.95rem;
       font-weight: bold;
       cursor: pointer;
+      transition: background-color 0.2s;
     }
 
+    button.btn-danger { background-color: var(--accent-color); }
     button.secondary { background-color: #7f8c8d; }
     button.admin-btn { background-color: #d35400; }
     button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
@@ -439,7 +469,7 @@
   <!-- 予約確認モーダル -->
   <div id="confirm-modal" class="modal-overlay">
     <div class="modal-card">
-      <div class="modal-title">予約内容の確認</div>
+      <div id="modal-title" class="modal-title">予約内容の確認</div>
       <div id="modal-body-text" class="modal-body"></div>
       <div class="modal-buttons">
         <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
@@ -645,7 +675,6 @@
         return 0;
       });
 
-      // 【要件3】スタンプカードタブの使い方ガイドを追加
       const guideBox = document.createElement("div");
       guideBox.className = "guide-box";
       guideBox.innerHTML = `
@@ -880,19 +909,38 @@
       const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
       const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
 
-      // 【要件2】登録されている全候補日程のリスト化
+      // 予約可能日程一覧
       const allDatesListHtml = (event.dates && event.dates.length > 0)
         ? event.dates.map(d => `<li>${escapeHtml(d)}</li>`).join('')
         : '<li>日程未定</li>';
 
-      // 【要件1】デフォルト選択肢を「-- 日程を選択してください --」にする
-      const optionsHtml = `
-        <option value="">-- 日程を選択してください --</option>
-        ${event.dates && event.dates.length > 0 
-          ? event.dates.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('')
-          : ''
+      // 【追加要件1】キャンセル選択肢を追加
+      let optionsHtml = `<option value="">-- 日程を選択してください --</option>`;
+      if (event.dates && event.dates.length > 0) {
+        optionsHtml += event.dates.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+      }
+      if (bookedDateRaw) {
+        optionsHtml += `<option value="CANCEL" style="color:red;">-- キャンセル（予約を取り消す） --</option>`;
+      }
+
+      // 【追加要件2】予約中日程の参加メンバー一覧を作成
+      let membersHtml = '';
+      if (bookedDateRaw) {
+        const sameDateBookings = allBookings.filter(b => 
+          String(b.eventId) === String(eventId) && 
+          formatDateOnly(b.selectedDate) === formattedDateOnly
+        );
+        
+        if (sameDateBookings.length > 0) {
+          const tags = sameDateBookings.map(b => `<span class="member-tag">👤 ${escapeHtml(b.displayName)}</span>`).join('');
+          membersHtml = `
+            <div class="members-box">
+              <div class="members-title">👥 参加予定のメンバー (${sameDateBookings.length}名)</div>
+              <div class="members-tags">${tags}</div>
+            </div>
+          `;
         }
-      `;
+      }
 
       let bookingHtml = `
         <div class="poster-box">
@@ -908,20 +956,20 @@
             ${bookedDateRaw ? `現在の予約: <strong>${escapeHtml(formattedDateOnly)}</strong>` : '現在の予約: 未予約'}
           </div>
 
-          <!-- 【要件2】スプレッドシートにある予約可能日時一覧を表示 -->
+          ${membersHtml}
+
           <div class="all-dates-box">
             <div style="font-size:0.8rem; font-weight:bold; color:#555;">🗓 予約可能日時一覧:</div>
             <ul>${allDatesListHtml}</ul>
           </div>
 
-          <label for="date-select-${eventId}">参加可能日時を選択:</label>
-          <!-- 【要件1】初期状態は未選択 ("") -->
-          <select id="date-select-${eventId}" ${isDisabled ? 'disabled' : ''}>
+          <label for="date-select-${eventId}">参加日時選択 / 変更・キャンセル:</label>
+          <select id="date-select-${eventId}" ${isDisabled ? 'disabled' : ''} onchange="handleSelectChange('${eventId}')">
             ${optionsHtml}
           </select>
 
           ${!isDisabled 
-            ? `<button onclick="confirmBookingPrompt('${eventId}')">${bookedDateRaw ? '予約日程を変更する' : 'この日程で予約する'}</button>`
+            ? `<button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')">${bookedDateRaw ? '予約日程を変更する' : 'この日程で予約する'}</button>`
             : `<button disabled style="background-color: #cbd5e0; color: #718096;">${isUpcoming ? '今後開催のため予約不可' : '受付終了'}</button>`
           }
         </div>
@@ -929,6 +977,21 @@
 
       bookingCard.innerHTML = bookingHtml;
       container.appendChild(bookingCard);
+    }
+
+    function handleSelectChange(eventId) {
+      const selectElem = document.getElementById(`date-select-${eventId}`);
+      const btnElem = document.getElementById(`booking-btn-${eventId}`);
+      if (!selectElem || !btnElem) return;
+
+      if (selectElem.value === "CANCEL") {
+        btnElem.innerText = "予約をキャンセルする";
+        btnElem.classList.add("btn-danger");
+      } else {
+        const bookedDateRaw = userBookings[eventId];
+        btnElem.innerText = bookedDateRaw ? '予約日程を変更する' : 'この日程で予約する';
+        btnElem.classList.remove("btn-danger");
+      }
     }
 
     function switchTab(tabName) {
@@ -969,9 +1032,8 @@
       const selectElem = document.getElementById(`date-select-${eventId}`);
       const selectedDate = selectElem ? selectElem.value : "";
       
-      // 未選択バリデーション
       if (!selectedDate) {
-        alert("予約する日程を選択してください。");
+        alert("選択肢を選んでください。");
         return;
       }
 
@@ -979,13 +1041,31 @@
       const stampIcon = masterEvents[eventId].stampIcon || '🎬';
       pendingBookingData = { eventId, selectedDate };
 
-      document.getElementById("modal-body-text").innerHTML = `
-        <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong><br>
-        日時：<strong>${escapeHtml(selectedDate)}</strong><br><br>
-        この日程で予約を確定しますか？
-      `;
+      const modalTitle = document.getElementById("modal-title");
+      const modalBody = document.getElementById("modal-body-text");
+      const confirmBtn = document.getElementById("modal-confirm-btn");
 
-      document.getElementById("modal-confirm-btn").onclick = executeBooking;
+      if (selectedDate === "CANCEL") {
+        modalTitle.innerText = "予約キャンセルの確認";
+        modalBody.innerHTML = `
+          <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong>の<br>
+          現在の予約を取り消しますか？
+        `;
+        confirmBtn.innerText = "キャンセルを実行";
+        confirmBtn.className = "btn-danger";
+        confirmBtn.onclick = executeCancelBooking;
+      } else {
+        modalTitle.innerText = "予約内容の確認";
+        modalBody.innerHTML = `
+          <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong><br>
+          日時：<strong>${escapeHtml(selectedDate)}</strong><br><br>
+          この日程で予約を確定しますか？
+        `;
+        confirmBtn.innerText = "確定する";
+        confirmBtn.className = "";
+        confirmBtn.onclick = executeBooking;
+      }
+
       document.getElementById("confirm-modal").classList.add("active");
     }
 
@@ -1016,6 +1096,30 @@
         await loadStatus();
       } else {
         alert("予約処理に失敗しました: " + (res.error || ""));
+      }
+    }
+
+    async function executeCancelBooking() {
+      if (!pendingBookingData) return;
+      const { eventId } = pendingBookingData;
+      closeModal();
+
+      showProcessing("予約をキャンセルしています...");
+
+      const payload = {
+        action: "CANCEL_BOOKING",
+        eventId: eventId
+      };
+
+      const res = await sendPost(payload);
+      hideProcessing();
+
+      if (res.ok) {
+        alert(`「${masterEvents[eventId].name}」の予約をキャンセルしました。`);
+        resetToInitialLoading();
+        await loadStatus();
+      } else {
+        alert("キャンセル処理に失敗しました: " + (res.error || ""));
       }
     }
 
