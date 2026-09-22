@@ -95,7 +95,6 @@
       padding-left: 8px;
     }
 
-    /* ガイドボックス */
     .guide-box {
       background: #fffbe6;
       border: 1px solid #ffe58f;
@@ -231,7 +230,6 @@
 
     .section-box { background-color: var(--bg-color); padding: 14px; border-radius: 8px; margin-bottom: 16px; }
 
-    /* 日程＆参加者リスト スタイル */
     .all-dates-box {
       background: #ffffff;
       border: 1px solid #e1e8ed;
@@ -509,7 +507,7 @@
       <div id="modal-title" class="modal-title">予約内容の確認</div>
       <div id="modal-body-text" class="modal-body"></div>
       <div class="modal-buttons">
-        <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+        <button class="btn-cancel" onclick="closeModal()">やめとく</button>
         <button id="modal-confirm-btn">確定する</button>
       </div>
     </div>
@@ -544,7 +542,6 @@
 
     const selectedReactions = {};
 
-    // ★ タブ切り替え関数を追加
     function switchTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -556,6 +553,8 @@
         document.getElementById('tab-stamps').classList.add('active');
         document.getElementById('btn-tab-stamps').classList.add('active');
       }
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function toggleEmotionTag(eventId, tag, isDisabled) {
@@ -930,6 +929,13 @@
 
               <div class="section-title" style="color:#d35400;">📋 予約一覧 (${eventBookings.length}件)</div>
               <div class="booking-list-box">${bookingListHtml}</div>
+
+              <!-- ★ 通常画面への切り替えテキストリンク ★ -->
+              <div style="text-align: right; margin-top: 14px;">
+                <a href="#" onclick="switchTab('booking'); return false;" style="color: #2b6cb0; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">
+                  👉 通常画面（予約・日程）を見る
+                </a>
+              </div>
             </div>
           `;
         }
@@ -1043,18 +1049,14 @@
       if (event.dates && event.dates.length > 0) {
         optionsHtml += event.dates.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
       }
-      
-      if (bookedDateRaw) {
-        optionsHtml += `<option value="CANCEL" style="color:red;">🔴 予約をキャンセルする</option>`;
-      }
 
       let actionButtonsHtml = '';
       if (!isDisabled) {
         if (bookedDateRaw) {
           actionButtonsHtml = `
             <div class="btn-group">
-              <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')" style="flex:2;">予約日程を変更</button>
-              <button class="btn-danger" onclick="triggerDirectCancel('${eventId}')" style="flex:1;">キャンセル</button>
+              <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')" style="flex:2;">日程を変更</button>
+              <button class="btn-danger" onclick="triggerDirectCancel('${eventId}')" style="flex:1;">予約を取消</button>
             </div>
           `;
         } else {
@@ -1137,12 +1139,12 @@
       const modalBody = document.getElementById("modal-body-text");
       const confirmBtn = document.getElementById("modal-confirm-btn");
 
-      modalTitle.innerText = "予約キャンセルの確認";
+      modalTitle.innerText = "予約取消の確認";
       modalBody.innerHTML = `
         <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong>の<br>
         現在の予約を取り消しますか？
       `;
-      confirmBtn.innerText = "キャンセルを実行";
+      confirmBtn.innerText = "取消実行";
       confirmBtn.className = "btn-danger";
       confirmBtn.onclick = executeCancelBooking;
 
@@ -1219,7 +1221,7 @@
       const { eventId } = pendingBookingData;
       closeModal();
 
-      showProcessing("予約をキャンセルしています...");
+      showProcessing("予約を取り消しています...");
 
       const payload = {
         action: "CANCEL_BOOKING",
@@ -1230,11 +1232,11 @@
       hideProcessing();
 
       if (res.ok) {
-        alert(`「${masterEvents[eventId].name}」の予約をキャンセルしました。`);
+        alert(`「${masterEvents[eventId].name}」の予約の取消が完了しました。`);
         resetToInitialLoading();
         await loadStatus();
       } else {
-        alert("キャンセル処理に失敗しました: " + (res.error || ""));
+        alert("予約取消処理に失敗しました: " + (res.error || ""));
       }
     }
 
