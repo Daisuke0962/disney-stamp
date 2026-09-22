@@ -231,39 +231,71 @@
 
     .section-box { background-color: var(--bg-color); padding: 14px; border-radius: 8px; margin-bottom: 16px; }
 
+    /* 日程＆参加者リスト スタイル */
     .all-dates-box {
       background: #ffffff;
       border: 1px solid #e1e8ed;
-      border-radius: 6px;
-      padding: 8px 12px;
-      margin: 8px 0 12px 0;
-    }
-    .all-dates-box ul {
-      margin: 4px 0 0 0;
-      padding-left: 18px;
-      font-size: 0.85rem;
-      color: #444;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 8px 0 14px 0;
     }
 
-    /* 参加メンバー表示ボックス */
-    .members-box {
-      background: #eef2f5;
-      border: 1px solid #cbd5e0;
-      border-radius: 6px;
-      padding: 8px 12px;
-      margin: 8px 0 12px 0;
+    .date-row-item {
+      padding: 6px 0;
+      border-bottom: 1px dashed #edf2f7;
+    }
+    .date-row-item:last-child { border-bottom: none; }
+
+    .date-row-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       font-size: 0.85rem;
+      color: #333;
     }
-    .members-title {
+
+    .member-toggle-btn {
+      background-color: #edf2f7;
+      color: #2b6cb0;
+      border: 1px solid #cbd5e0;
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-size: 0.75rem;
       font-weight: bold;
-      color: var(--primary-color);
-      margin-bottom: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+      width: auto;
     }
+
+    .member-toggle-btn:hover {
+      background-color: #e2e8f0;
+      border-color: #4299e1;
+    }
+
+    .member-toggle-btn.empty {
+      background-color: #f7fafc;
+      color: #a0aec0;
+      border-color: #e2e8f0;
+      cursor: default;
+    }
+
+    .members-accordion {
+      display: none;
+      padding: 8px;
+      margin-top: 6px;
+      background: #f7fafc;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+    .members-accordion.active { display: block; }
+
     .members-tags {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
-      margin-top: 4px;
     }
     .member-tag {
       background: #ffffff;
@@ -317,6 +349,11 @@
       border-radius: 6px;
       font-size: 0.95rem;
       background-color: #fff;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
     }
 
     button {
@@ -897,6 +934,7 @@
 
       const isUpcoming = (status === "今後開催");
       const isEnded = (status === "開催終了");
+      const isAccepting = (status === "受付中"); // ★ 受付中フラグ
       const isDisabled = isUpcoming || isEnded;
 
       const bookingCard = document.createElement("div");
@@ -909,35 +947,91 @@
       const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
       const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
 
-      // 予約可能日程一覧
-      const allDatesListHtml = (event.dates && event.dates.length > 0)
-        ? event.dates.map(d => `<li>${escapeHtml(d)}</li>`).join('')
-        : '<li>日程未定</li>';
+      // --- 日程ごとの参加者を抽出 ---
+      const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
 
+      let dateRowsHtml = '';
+      if (event.dates && event.dates.length > 0) {
+        dateRowsHtml = event.dates.map((dateStr, idx) => {
+          const formattedDate = formatDateOnly(dateStr);
+          const members = eventBookings
+            .filter(b => formatDateOnly(b.selectedDate) === formattedDate)
+            .map(b => b.displayName);
+          
+          const count = members.length;
+          const accordionId = `acc-${eventId}-${idx}`;
+
+          let buttonHtml = '';
+          // ★ 条件追加: ステータスが「受付中」のカードのみ参加者ボタン/アコーディオンを表示
+          if (isAccepting) {
+            if (count > 0) {
+              buttonHtml = `
+                <button class="member-toggle-btn" onclick="toggleAccordion('${accordionId}')">
+                  👥 参加者 (${count}人) <span id="arrow-${accordionId}">▾</span>
+                </button>
+              `;
+            } else {
+              buttonHtml = `
+                <span class="member-toggle-btn empty">
+                  👤 参加者なし
+                </span>
+              `;
+            }
+          }
+
+          const memberTagsHtml = members.length > 0
+            ? members.map(m => `<span class="member-tag">👤 ${escapeHtml(m)}</span>`).join('')
+            : '';
+
+          return `
+            <div class="date-row-item">
+              <div class="date-row-header">
+                <span>🗓 <strong>${escapeHtml(dateStr)}</strong></span>
+                ${buttonHtml}
+              </div>
+              ${(isAccepting && members.length > 0) ? `
+                <div id="${accordionId}" class="members-accordion">
+                  <div class="members-tags">${memberTagsHtml}</div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      } else {
+        dateRowsHtml = '<div style="font-size:0.85rem; color:#888;">日程未定</div>';
+      }
+
+      // プルダウン選択肢の生成
       let optionsHtml = `<option value="">-- 日程を選択してください --</option>`;
       if (event.dates && event.dates.length > 0) {
         optionsHtml += event.dates.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
       }
+      
+      // ★ 要件: 予約中のユーザーのみキャンセル選択肢をプールダウンにも追加
       if (bookedDateRaw) {
-        optionsHtml += `<option value="CANCEL" style="color:red;">-- キャンセル（予約を取り消す） --</option>`;
+        optionsHtml += `<option value="CANCEL" style="color:red;">🔴 予約をキャンセルする</option>`;
       }
 
-      let membersHtml = '';
-      if (bookedDateRaw) {
-        const sameDateBookings = allBookings.filter(b => 
-          String(b.eventId) === String(eventId) && 
-          formatDateOnly(b.selectedDate) === formattedDateOnly
-        );
-        
-        if (sameDateBookings.length > 0) {
-          const tags = sameDateBookings.map(b => `<span class="member-tag">👤 ${escapeHtml(b.displayName)}</span>`).join('');
-          membersHtml = `
-            <div class="members-box">
-              <div class="members-title">👥 参加予定のメンバー (${sameDateBookings.length}名)</div>
-              <div class="members-tags">${tags}</div>
+      let actionButtonsHtml = '';
+      if (!isDisabled) {
+        if (bookedDateRaw) {
+          // 予約済みの場合は「変更ボタン」と「キャンセルボタン」を横並びで表示
+          actionButtonsHtml = `
+            <div class="btn-group">
+              <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')" style="flex:2;">予約日程を変更</button>
+              <button class="btn-danger" onclick="triggerDirectCancel('${eventId}')" style="flex:1;">キャンセル</button>
             </div>
           `;
+        } else {
+          // 未予約の場合
+          actionButtonsHtml = `
+            <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')">この日程で予約する</button>
+          `;
         }
+      } else {
+        actionButtonsHtml = `
+          <button disabled style="background-color: #cbd5e0; color: #718096;">${isUpcoming ? '今後開催のため予約不可' : '受付終了'}</button>
+        `;
       }
 
       let bookingHtml = `
@@ -954,11 +1048,9 @@
             ${bookedDateRaw ? `現在の予約: <strong>${escapeHtml(formattedDateOnly)}</strong>` : '現在の予約: 未予約'}
           </div>
 
-          ${membersHtml}
-
           <div class="all-dates-box">
-            <div style="font-size:0.8rem; font-weight:bold; color:#555;">🗓 予約可能日時一覧:</div>
-            <ul>${allDatesListHtml}</ul>
+            <div style="font-size:0.8rem; font-weight:bold; color:#555; margin-bottom:6px;">🗓 予約可能日時・参加メンバー状況:</div>
+            ${dateRowsHtml}
           </div>
 
           <label for="date-select-${eventId}">参加日時選択 / 変更・キャンセル:</label>
@@ -966,15 +1058,27 @@
             ${optionsHtml}
           </select>
 
-          ${!isDisabled 
-            ? `<button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')">${bookedDateRaw ? '予約日程を変更する' : 'この日程で予約する'}</button>`
-            : `<button disabled style="background-color: #cbd5e0; color: #718096;">${isUpcoming ? '今後開催のため予約不可' : '受付終了'}</button>`
-          }
+          ${actionButtonsHtml}
         </div>
       `;
 
       bookingCard.innerHTML = bookingHtml;
       container.appendChild(bookingCard);
+    }
+
+    function toggleAccordion(accId) {
+      const elem = document.getElementById(accId);
+      const arrow = document.getElementById(`arrow-${accId}`);
+      if (!elem) return;
+
+      const isActive = elem.classList.contains('active');
+      if (isActive) {
+        elem.classList.remove('active');
+        if (arrow) arrow.innerText = '▾';
+      } else {
+        elem.classList.add('active');
+        if (arrow) arrow.innerText = '▴';
+      }
     }
 
     function handleSelectChange(eventId) {
@@ -983,47 +1087,33 @@
       if (!selectElem || !btnElem) return;
 
       if (selectElem.value === "CANCEL") {
-        btnElem.innerText = "予約をキャンセルする";
-        btnElem.classList.add("btn-danger");
-      } else {
-        const bookedDateRaw = userBookings[eventId];
-        btnElem.innerText = bookedDateRaw ? '予約日程を変更する' : 'この日程で予約する';
-        btnElem.classList.remove("btn-danger");
+        triggerDirectCancel(eventId);
       }
     }
 
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-      if (tabName === 'booking') {
-        document.getElementById('btn-tab-booking').classList.add('active');
-        document.getElementById('tab-booking').classList.add('active');
-      } else {
-        document.getElementById('btn-tab-stamps').classList.add('active');
-        document.getElementById('tab-stamps').classList.add('active');
-      }
-    }
-
-    function toggleEmotionTag(eventId, tag, isDisabled) {
-      if (isDisabled) return;
-      if (!selectedReactions[eventId]) selectedReactions[eventId] = new Set();
-
-      const set = selectedReactions[eventId];
-      if (set.has(tag)) set.delete(tag);
-      else set.add(tag);
-
-      const container = document.getElementById(`chips-${eventId}`);
-      const btn = document.getElementById(`reaction-btn-${eventId}`);
+    // キャンセルボタンを直接押した際のトリガー
+    function triggerDirectCancel(eventId) {
+      const selectElem = document.getElementById(`date-select-${eventId}`);
+      if (selectElem) selectElem.value = "CANCEL";
       
-      if (container) {
-        container.querySelectorAll('.chip').forEach(chip => {
-          if (chip.innerText.trim() === tag) {
-            chip.classList.toggle('selected', set.has(tag));
-          }
-        });
-      }
-      if (btn) btn.disabled = set.size === 0;
+      pendingBookingData = { eventId, selectedDate: "CANCEL" };
+      const eventName = masterEvents[eventId].name;
+      const stampIcon = masterEvents[eventId].stampIcon || '🎬';
+
+      const modalTitle = document.getElementById("modal-title");
+      const modalBody = document.getElementById("modal-body-text");
+      const confirmBtn = document.getElementById("modal-confirm-btn");
+
+      modalTitle.innerText = "予約キャンセルの確認";
+      modalBody.innerHTML = `
+        <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong>の<br>
+        現在の予約を取り消しますか？
+      `;
+      confirmBtn.innerText = "キャンセルを実行";
+      confirmBtn.className = "btn-danger";
+      confirmBtn.onclick = executeCancelBooking;
+
+      document.getElementById("confirm-modal").classList.add("active");
     }
 
     function confirmBookingPrompt(eventId) {
@@ -1031,7 +1121,12 @@
       const selectedDate = selectElem ? selectElem.value : "";
       
       if (!selectedDate) {
-        alert("選択肢を選んでください。");
+        alert("日程を選択してください。");
+        return;
+      }
+
+      if (selectedDate === "CANCEL") {
+        triggerDirectCancel(eventId);
         return;
       }
 
@@ -1043,26 +1138,15 @@
       const modalBody = document.getElementById("modal-body-text");
       const confirmBtn = document.getElementById("modal-confirm-btn");
 
-      if (selectedDate === "CANCEL") {
-        modalTitle.innerText = "予約キャンセルの確認";
-        modalBody.innerHTML = `
-          <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong>の<br>
-          現在の予約を取り消しますか？
-        `;
-        confirmBtn.innerText = "キャンセルを実行";
-        confirmBtn.className = "btn-danger";
-        confirmBtn.onclick = executeCancelBooking;
-      } else {
-        modalTitle.innerText = "予約内容の確認";
-        modalBody.innerHTML = `
-          <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong><br>
-          日時：<strong>${escapeHtml(selectedDate)}</strong><br><br>
-          この日程で予約を確定しますか？
-        `;
-        confirmBtn.innerText = "確定する";
-        confirmBtn.className = "";
-        confirmBtn.onclick = executeBooking;
-      }
+      modalTitle.innerText = "予約内容の確認";
+      modalBody.innerHTML = `
+        <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong><br>
+        日時：<strong>${escapeHtml(selectedDate)}</strong><br><br>
+        この日程で予約を確定しますか？
+      `;
+      confirmBtn.innerText = "確定する";
+      confirmBtn.className = "";
+      confirmBtn.onclick = executeBooking;
 
       document.getElementById("confirm-modal").classList.add("active");
     }
