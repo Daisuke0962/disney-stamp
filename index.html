@@ -105,7 +105,6 @@
       line-height: 1.5;
     }
 
-    /* シーズンセレクター */
     .season-selector-wrapper {
       display: flex;
       align-items: center;
@@ -138,7 +137,6 @@
       text-align: center;
     }
 
-    /* 特典獲得ポップアップバッジ */
     .reward-unlocked-badge {
       background: linear-gradient(135deg, #fff9db 0%, #fff3bf 100%);
       border: 2px solid #fcc419;
@@ -587,7 +585,6 @@
     let isAdminMode = false;
     let pendingBookingData = null;
 
-    // シーズン制御用グローバル変数
     let availableSeasons = [];
     let currentSeason = "";
 
@@ -597,22 +594,6 @@
     ];
 
     const selectedReactions = {};
-
-   /**
-   * 管理者画面から該当イベントの予約カード（通常画面）へジャンプする関数
-   */
-    function scrollToBookingCard(eventId) {
-      // 1. 予約タブに切り替え
-      switchTab('booking');
-      
-      // 2. 予約タブ内の該当イベントカードを取得してスクロール
-      setTimeout(() => {
-        const bookingCard = document.getElementById(`booking-card-${eventId}`);
-        if (bookingCard) {
-          bookingCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
-    }
 
     function switchTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -627,6 +608,11 @@
       }
       
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 「通常画面を見る」を押した時の切り替え＆画面状態クリア関数
+    function resetAndSwitchToBooking() {
+      switchTab('booking');
     }
 
     function toggleEmotionTag(eventId, tag, isDisabled) {
@@ -799,7 +785,6 @@
         allBookings = data.allBookings || [];
         isAdminMode = !!data.isAdmin;
 
-        // シーズン一覧の自動抽出・初期化
         const seasonSet = new Set();
         Object.values(masterEvents).forEach(ev => {
           if (ev.season && ev.season.trim() !== "") {
@@ -809,7 +794,7 @@
         availableSeasons = Array.from(seasonSet);
         if (availableSeasons.length === 0) availableSeasons = ["2026秋"];
         if (!currentSeason || !availableSeasons.includes(currentSeason)) {
-          currentSeason = availableSeasons[availableSeasons.length - 1]; // 最新シーズンを初期選択
+          currentSeason = availableSeasons[availableSeasons.length - 1];
         }
 
         document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様 ${isAdminMode ? ' (管理者)' : ''}`;
@@ -833,11 +818,10 @@
       }
     }
 
-    // シーズン達成判定（特典イベント以外のすべてのスタンプを獲得したか）
     function checkSeasonRewardUnlocked(seasonName) {
       const seasonEvents = Object.keys(masterEvents).filter(id => {
         const ev = masterEvents[id];
-        return ev.season === seasonName && !ev.payPayLinkDiscount; // 特典対象でない＝スタンプ対象
+        return ev.season === seasonName && !ev.payPayLinkDiscount;
       });
       if (seasonEvents.length === 0) return false;
       return seasonEvents.every(id => userStamps.includes(id));
@@ -874,17 +858,27 @@
       const prevSeasonDisabled = seasonIdx <= 0;
       const nextSeasonDisabled = seasonIdx >= availableSeasons.length - 1;
 
-      // 現在シーズンの対象イベント抽出
       const seasonEventKeys = validEventKeys.filter(id => masterEvents[id].season === currentSeason);
       const stampTargetKeys = seasonEventKeys.filter(id => !masterEvents[id].payPayLinkDiscount);
       const rewardTargetKeys = seasonEventKeys.filter(id => !!masterEvents[id].payPayLinkDiscount);
 
-      // 進捗率計算
       const stampedCountInSeason = stampTargetKeys.filter(id => userStamps.includes(id)).length;
       const totalStampTargetCount = stampTargetKeys.length || 1;
       const progressPercent = Math.min(100, Math.floor((stampedCountInSeason / totalStampTargetCount) * 100));
 
       const isRewardUnlocked = checkSeasonRewardUnlocked(currentSeason);
+
+      // ★ 管理者モード時のみ、スタンプラリータブの最上部に単一の「通常画面に戻る」リンクを配置
+      if (isAdminMode) {
+        const backToUserViewHtml = `
+          <div style="text-align: right; margin-bottom: 12px;">
+            <a href="#" onclick="resetAndSwitchToBooking(); return false;" style="color: #2b6cb0; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">
+              👉 通常画面（予約・日程）を見る
+            </a>
+          </div>
+        `;
+        stampsContainer.insertAdjacentHTML('beforeend', backToUserViewHtml);
+      }
 
       const guideBox = document.createElement("div");
       guideBox.className = "guide-box";
@@ -898,7 +892,6 @@
       `;
       stampsContainer.appendChild(guideBox);
 
-      // シーズンセレクター ＆ 進捗バー
       const seasonSelectorHtml = `
         <div class="season-selector-wrapper">
           <button class="season-nav-btn" onclick="changeSeason(-1)" ${prevSeasonDisabled ? 'disabled' : ''}>◀ 過去</button>
@@ -908,7 +901,6 @@
       `;
       stampsContainer.insertAdjacentHTML('beforeend', seasonSelectorHtml);
 
-      // 特典解放バッジ（達成時のみ）
       if (isRewardUnlocked) {
         const rewardBadgeHtml = `
           <div class="reward-unlocked-badge">
@@ -919,12 +911,10 @@
         stampsContainer.insertAdjacentHTML('beforeend', rewardBadgeHtml);
       }
 
-      // スタンプボード
       const stampBoard = document.createElement("div");
       stampBoard.className = "stamp-board";
       
       let gridCellsHtml = "";
-      // 通常スタンプ枠
       stampTargetKeys.forEach((eventId, i) => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
@@ -941,7 +931,6 @@
         `;
       });
 
-      // 特典イベント枠（枠線強調）
       rewardTargetKeys.forEach(eventId => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
@@ -999,7 +988,7 @@
         endedKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
       }
 
-      // --- スタンプタブ（各イベント詳細カード） ---
+      // --- スタンプタブ（詳細カード） ---
       validEventKeys.forEach(eventId => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
@@ -1118,12 +1107,6 @@
 
               <div class="section-title" style="color:#d35400;">📋 予約一覧 (${eventBookings.length}件)</div>
               <div class="booking-list-box">${bookingListHtml}</div>
-
-              <div style="text-align: right; margin-top: 14px;">
-                <a href="#" onclick="scrollToBookingCard('${eventId}'); return false;" style="color: #2b6cb0; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">
-                  👉 通常画面（予約・日程）を見る
-                </a>
-              </div>
             </div>
           `;
         }
@@ -1176,7 +1159,6 @@
       const isRewardUnlocked = checkSeasonRewardUnlocked(event.season);
 
       const bookingCard = document.createElement("div");
-      bookingCard.id = `booking-card-${eventId}`;
       bookingCard.className = `card ${isDisabled ? 'disabled-card' : ''}`;
 
       let badgeHtml = '';
