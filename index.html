@@ -614,16 +614,33 @@
 
     function showError(message, detail = "") {
       const container = document.getElementById("error-container");
-      if (container) {
+      if (!container) return;
+    
+      // unauthorized（認証エラー）の場合の親切な案内メッセージ
+      if (detail === "unauthorized" || message.includes("unauthorized")) {
         container.innerHTML = `
-          <div class="error-box">
-            <strong>エラーが発生しました:</strong><br>
-            ${message}
-            ${detail ? `<br><small style="opacity:0.8;">詳細: ${detail}</small>` : ''}
+          <div class="error-box" style="text-align: center; padding: 20px 16px;">
+            <div style="font-size: 2.5rem; margin-bottom: 8px;">📱</div>
+            <strong style="font-size: 1rem; color: #2c3e50;">スマートフォンでご利用ください</strong><br><br>
+            <span style="font-size: 0.85rem; color: #555; line-height: 1.6;">
+              本アプリはLINEログイン認証が必要です。<br>
+              PCブラウザからはログインできない仕様となっております。<br><br>
+              恐れ入りますが、<strong>スマートフォンのLINEアプリ内</strong>からリンクを開き直してご利用ください。
+            </span>
           </div>
-          <button onclick="location.reload()" style="margin-top:15px; background-color:#e74c3c;">再読み込み</button>
         `;
+        return;
       }
+    
+      // その他の一般エラー表示
+      container.innerHTML = `
+        <div class="error-box">
+          <strong>エラーが発生しました:</strong><br>
+          ${escapeHtml(message)}
+          ${detail ? `<br><small style="opacity:0.8;">詳細: ${escapeHtml(detail)}</small>` : ''}
+        </div>
+        <button onclick="location.reload()" style="margin-top:15px; background-color:#e74c3c;">再読み込み</button>
+      `;
     }
 
     function showProcessing(message = "処理中...") {
@@ -636,6 +653,13 @@
     }
 
     window.onload = async function() {
+      // PC等の非モバイル端末からのアクセスを検知して案内を表示
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (!isMobile) {
+        showError("PCからのアクセス", "unauthorized");
+        return;
+      }
+      
       updateProgress(20, "LINEアカウント認証中...");
       
       try {
