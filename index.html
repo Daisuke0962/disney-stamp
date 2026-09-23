@@ -105,6 +105,54 @@
       line-height: 1.5;
     }
 
+    /* シーズンセレクター */
+    .season-selector-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+
+    .season-nav-btn {
+      background: #edf2f7;
+      border: 1px solid #cbd5e0;
+      color: #2d3748;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      cursor: pointer;
+      width: auto;
+    }
+    .season-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .season-title-display {
+      font-size: 1.05rem;
+      font-weight: bold;
+      color: var(--primary-color);
+      text-align: center;
+    }
+
+    /* 特典獲得ポップアップバッジ */
+    .reward-unlocked-badge {
+      background: linear-gradient(135deg, #fff9db 0%, #fff3bf 100%);
+      border: 2px solid #fcc419;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      margin-bottom: 16px;
+      color: #856404;
+      font-weight: bold;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 10px rgba(243, 156, 18, 0.2);
+      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
     .stamp-board {
       background: #fff;
       border: 2px dashed #bdc3c7;
@@ -119,7 +167,7 @@
       font-weight: bold;
       color: var(--primary-color);
       font-size: 1.1rem;
-      margin-bottom: 14px;
+      margin-bottom: 8px;
     }
 
     .stamp-grid {
@@ -146,6 +194,7 @@
     }
 
     .stamp-cell.stamped { background-color: #f0fdf4; border-color: var(--success-color); }
+    .stamp-cell.reward-cell { border-style: dashed; border-color: #f39c12; background-color: #fffdf5; }
     .stamp-mark { font-size: 2.5rem; line-height: 1; margin-bottom: 4px; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     .stamp-empty { font-size: 1.8rem; color: #ccc; font-weight: bold; margin-bottom: 4px; }
     .stamp-event-name { font-size: 0.7rem; font-weight: bold; color: #555; width: 100%; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2; }
@@ -165,7 +214,7 @@
       background-color: #e0e0e0;
       border-radius: 10px;
       overflow: hidden;
-      margin: 20px 0 10px 0;
+      margin: 12px 0 6px 0;
       height: 12px;
     }
 
@@ -222,6 +271,32 @@
       line-height: 1.4;
     }
 
+    .price-tag {
+      display: inline-block;
+      background: #edf2f7;
+      color: #2d3748;
+      font-size: 0.8rem;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .coupon-check-box {
+      background: #fff9db;
+      border: 1px solid #fcc419;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+      font-size: 0.85rem;
+      color: #856404;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .coupon-check-box input { width: 18px; height: 18px; cursor: pointer; }
+
     .stamp-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; margin-bottom: 16px; }
     .stamp-badge.got { background-color: #e8f8f5; color: var(--success-color); border: 1px solid var(--success-color); }
     .stamp-badge.not-got { background-color: #fef9e7; color: var(--warning-color); border: 1px solid var(--warning-color); }
@@ -268,17 +343,8 @@
       width: auto;
     }
 
-    .member-toggle-btn:hover {
-      background-color: #e2e8f0;
-      border-color: #4299e1;
-    }
-
-    .member-toggle-btn.empty {
-      background-color: #f7fafc;
-      color: #a0aec0;
-      border-color: #e2e8f0;
-      cursor: default;
-    }
+    .member-toggle-btn:hover { background-color: #e2e8f0; border-color: #4299e1; }
+    .member-toggle-btn.empty { background-color: #f7fafc; color: #a0aec0; border-color: #e2e8f0; cursor: default; }
 
     .members-accordion {
       display: none;
@@ -290,19 +356,8 @@
     }
     .members-accordion.active { display: block; }
 
-    .members-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .member-tag {
-      background: #ffffff;
-      border: 1px solid #cbd5e0;
-      border-radius: 12px;
-      padding: 2px 8px;
-      font-size: 0.78rem;
-      color: #2d3748;
-    }
+    .members-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .member-tag { background: #ffffff; border: 1px solid #cbd5e0; border-radius: 12px; padding: 2px 8px; font-size: 0.78rem; color: #2d3748; }
 
     .admin-box {
       background-color: #fff8e7;
@@ -349,10 +404,7 @@
       background-color: #fff;
     }
 
-    .btn-group {
-      display: flex;
-      gap: 8px;
-    }
+    .btn-group { display: flex; gap: 8px; }
 
     button {
       width: 100%;
@@ -535,6 +587,10 @@
     let isAdminMode = false;
     let pendingBookingData = null;
 
+    // シーズン制御用グローバル変数
+    let availableSeasons = [];
+    let currentSeason = "";
+
     const EMOTION_TAGS = [
       "🥹 感動", "☕️ ほっこり", "🪄 余韻", "💡 発見",
       "🍃 すっきり", "❤️ 愛おしい", "☕️ 穏やか", "✨ 高揚"
@@ -616,7 +672,6 @@
       const container = document.getElementById("error-container");
       if (!container) return;
     
-      // unauthorized（認証エラー）の場合の親切な案内メッセージ
       if (detail === "unauthorized" || message.includes("unauthorized")) {
         container.innerHTML = `
           <div class="error-box" style="text-align: center; padding: 20px 16px;">
@@ -632,7 +687,6 @@
         return;
       }
     
-      // その他の一般エラー表示
       container.innerHTML = `
         <div class="error-box">
           <strong>エラーが発生しました:</strong><br>
@@ -653,7 +707,6 @@
     }
 
     window.onload = async function() {
-      // PC等の非モバイル端末からのアクセスを検知して案内を表示
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (!isMobile) {
         showError("PCからのアクセス", "unauthorized");
@@ -730,6 +783,19 @@
         allBookings = data.allBookings || [];
         isAdminMode = !!data.isAdmin;
 
+        // シーズン一覧の自動抽出・初期化
+        const seasonSet = new Set();
+        Object.values(masterEvents).forEach(ev => {
+          if (ev.season && ev.season.trim() !== "") {
+            seasonSet.add(ev.season.trim());
+          }
+        });
+        availableSeasons = Array.from(seasonSet);
+        if (availableSeasons.length === 0) availableSeasons = ["2026秋"];
+        if (!currentSeason || !availableSeasons.includes(currentSeason)) {
+          currentSeason = availableSeasons[availableSeasons.length - 1]; // 最新シーズンを初期選択
+        }
+
         document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様 ${isAdminMode ? ' (管理者)' : ''}`;
 
         updateProgress(100, "完了!");
@@ -739,6 +805,26 @@
         clearInterval(progressTimer);
         showError("データの読み込みに失敗しました。", err.message);
       }
+    }
+
+    function changeSeason(direction) {
+      const idx = availableSeasons.indexOf(currentSeason);
+      if (idx === -1) return;
+      const nextIdx = idx + direction;
+      if (nextIdx >= 0 && nextIdx < availableSeasons.length) {
+        currentSeason = availableSeasons[nextIdx];
+        renderApp();
+      }
+    }
+
+    // シーズン達成判定（特典イベント以外のすべてのスタンプを獲得したか）
+    function checkSeasonRewardUnlocked(seasonName) {
+      const seasonEvents = Object.keys(masterEvents).filter(id => {
+        const ev = masterEvents[id];
+        return ev.season === seasonName && !ev.payPayLinkDiscount; // 特典対象でない＝スタンプ対象
+      });
+      if (seasonEvents.length === 0) return false;
+      return seasonEvents.every(id => userStamps.includes(id));
     }
 
     function renderApp() {
@@ -768,13 +854,21 @@
       const stampsContainer = document.getElementById("tab-stamps");
 
       // --- スタンプラリーボード ---
-      const sortedEventKeysForBoard = [...validEventKeys].sort((a, b) => {
-        const aStamped = userStamps.includes(a);
-        const bStamped = userStamps.includes(b);
-        if (aStamped && !bStamped) return -1;
-        if (!aStamped && bStamped) return 1;
-        return 0;
-      });
+      const seasonIdx = availableSeasons.indexOf(currentSeason);
+      const prevSeasonDisabled = seasonIdx <= 0;
+      const nextSeasonDisabled = seasonIdx >= availableSeasons.length - 1;
+
+      // 現在シーズンの対象イベント抽出
+      const seasonEventKeys = validEventKeys.filter(id => masterEvents[id].season === currentSeason);
+      const stampTargetKeys = seasonEventKeys.filter(id => !masterEvents[id].payPayLinkDiscount);
+      const rewardTargetKeys = seasonEventKeys.filter(id => !!masterEvents[id].payPayLinkDiscount);
+
+      // 進捗率計算
+      const stampedCountInSeason = stampTargetKeys.filter(id => userStamps.includes(id)).length;
+      const totalStampTargetCount = stampTargetKeys.length || 1;
+      const progressPercent = Math.min(100, Math.floor((stampedCountInSeason / totalStampTargetCount) * 100));
+
+      const isRewardUnlocked = checkSeasonRewardUnlocked(currentSeason);
 
       const guideBox = document.createElement("div");
       guideBox.className = "guide-box";
@@ -783,43 +877,81 @@
         <ol style="margin: 0; padding-left: 18px; color: #555;">
           <li>上映会に参加して、会場で発表される<strong>「クイズのキーワード」</strong>をチェック！</li>
           <li>下の各上映会から回答を入力して送信するとスタンプを獲得できます🎉</li>
-          <li>観賞後は「心の動き」タグを選んで感想の共有もできます✨</li>
+          <li>コンプリートすると<strong>100円引きクーポン</strong>をGET！</li>
         </ol>
       `;
       stampsContainer.appendChild(guideBox);
 
+      // シーズンセレクター ＆ 進捗バー
+      const seasonSelectorHtml = `
+        <div class="season-selector-wrapper">
+          <button class="season-nav-btn" onclick="changeSeason(-1)" ${prevSeasonDisabled ? 'disabled' : ''}>◀ 過去</button>
+          <div class="season-title-display">${escapeHtml(currentSeason)}</div>
+          <button class="season-nav-btn" onclick="changeSeason(1)" ${nextSeasonDisabled ? 'disabled' : ''}>次回 ▶</button>
+        </div>
+      `;
+      stampsContainer.insertAdjacentHTML('beforeend', seasonSelectorHtml);
+
+      // 特典解放バッジ（達成時のみ）
+      if (isRewardUnlocked) {
+        const rewardBadgeHtml = `
+          <div class="reward-unlocked-badge">
+            🎉 ${escapeHtml(currentSeason)} コンプリート達成！<br>
+            <span style="font-size:0.8rem; font-weight:normal;">フィナーレ用「100円引きクーポン」が利用可能です！</span>
+          </div>
+        `;
+        stampsContainer.insertAdjacentHTML('beforeend', rewardBadgeHtml);
+      }
+
+      // スタンプボード
       const stampBoard = document.createElement("div");
       stampBoard.className = "stamp-board";
       
       let gridCellsHtml = "";
-      for (let i = 0; i < 4; i++) {
-        const eventId = sortedEventKeysForBoard[i];
-        if (eventId) {
-          const event = masterEvents[eventId];
-          const isStamped = userStamps.includes(eventId);
-          const stampIcon = event.stampIcon || '🎬';
+      // 通常スタンプ枠
+      stampTargetKeys.forEach((eventId, i) => {
+        const event = masterEvents[eventId];
+        const isStamped = userStamps.includes(eventId);
+        const stampIcon = event.stampIcon || '🎬';
 
-          gridCellsHtml += `
-            <div class="stamp-cell ${isStamped ? 'stamped' : ''}">
-              ${isStamped 
-                ? `<div class="stamp-mark">${escapeHtml(stampIcon)}</div>` 
-                : `<div class="stamp-empty">${i + 1}</div>`
-              }
-              <div class="stamp-event-name">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
-            </div>
-          `;
-        } else {
-          gridCellsHtml += `
-            <div class="stamp-cell">
-              <div class="stamp-empty">${i + 1}</div>
-              <div class="stamp-event-name" style="color:#aaa;">Coming Soon</div>
-            </div>
-          `;
-        }
+        gridCellsHtml += `
+          <div class="stamp-cell ${isStamped ? 'stamped' : ''}">
+            ${isStamped 
+              ? `<div class="stamp-mark">${escapeHtml(stampIcon)}</div>` 
+              : `<div class="stamp-empty">${i + 1}</div>`
+            }
+            <div class="stamp-event-name">${escapeHtml(event.name)}</div>
+          </div>
+        `;
+      });
+
+      // 特典イベント枠（枠線強調）
+      rewardTargetKeys.forEach(eventId => {
+        const event = masterEvents[eventId];
+        const isStamped = userStamps.includes(eventId);
+        const stampIcon = event.stampIcon || '🎵';
+
+        gridCellsHtml += `
+          <div class="stamp-cell reward-cell ${isStamped ? 'stamped' : ''}">
+            ${isStamped 
+              ? `<div class="stamp-mark">${escapeHtml(stampIcon)}</div>` 
+              : `<div class="stamp-empty">🎁</div>`
+            }
+            <div class="stamp-event-name" style="color:#d35400;">${escapeHtml(event.name)}</div>
+          </div>
+        `;
+      });
+
+      if (seasonEventKeys.length === 0) {
+        gridCellsHtml = `<div style="grid-column: span 2; text-align:center; color:#aaa; padding:20px;">このシーズンのイベントは準備中です</div>`;
       }
 
       stampBoard.innerHTML = `
-        <div class="stamp-board-title">✨ 上映会スタンプラリー ✨</div>
+        <div class="stamp-board-title">✨ ${escapeHtml(currentSeason)} スタンプラリー ✨</div>
+        <div class="progress-bar-wrapper">
+          <div class="progress-bar" style="width: ${progressPercent}%;"></div>
+        </div>
+        <div style="text-align:right; font-size:0.75rem; color:#666; margin-bottom:12px;">進捗: ${stampedCountInSeason} / ${stampTargetKeys.length} (${progressPercent}%)</div>
         <div class="stamp-grid">${gridCellsHtml}</div>
       `;
       stampsContainer.appendChild(stampBoard);
@@ -851,7 +983,7 @@
         endedKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
       }
 
-      // --- スタンプタブ ---
+      // --- スタンプタブ（各イベント詳細カード） ---
       validEventKeys.forEach(eventId => {
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
@@ -876,12 +1008,17 @@
 
         const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
         const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
+        const price = Number(event.price) || 0;
 
         let stampHtml = `
           <div class="poster-box">
             <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
           </div>
           <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
+          <div style="margin-bottom:6px;">
+            ${event.season ? `<span class="price-tag" style="background:#e2e8f0; margin-right:4px;">🗓️ ${escapeHtml(event.season)}</span>` : ''}
+            <span class="price-tag">${price > 0 ? `💰 参加費: ${price.toLocaleString()}円` : '🎁 参加費無料'}</span>
+          </div>
           <div class="catchphrase-box">💬 「${catchphrase}」</div>
           <span class="stamp-badge ${badgeClass}">${badgeText}</span>
         `;
@@ -917,6 +1054,18 @@
 
               <label>イベント名:</label>
               <input type="text" id="edit-name-${eventId}" value="${escapeHtml(event.name)}">
+
+              <label>該当シーズン (例: 2026秋):</label>
+              <input type="text" id="edit-season-${eventId}" value="${escapeHtml(event.season || '')}">
+
+              <label>参加費 (0で無料):</label>
+              <input type="text" id="edit-price-${eventId}" value="${escapeHtml(event.price || '0')}">
+
+              <label>PayPay通常受け取りリンク:</label>
+              <input type="text" id="edit-paypay-${eventId}" value="${escapeHtml(event.payPayLink || '')}">
+
+              <label>PayPay100円引き受け取りリンク (入力ありで特典対象に):</label>
+              <input type="text" id="edit-paypay-discount-${eventId}" value="${escapeHtml(event.payPayLinkDiscount || '')}">
 
               <label>スタンプアイコン絵文字:</label>
               <input type="text" id="edit-icon-${eventId}" value="${escapeHtml(stampIcon)}">
@@ -954,7 +1103,6 @@
               <div class="section-title" style="color:#d35400;">📋 予約一覧 (${eventBookings.length}件)</div>
               <div class="booking-list-box">${bookingListHtml}</div>
 
-              <!-- ★ 通常画面への切り替えテキストリンク ★ -->
               <div style="text-align: right; margin-top: 14px;">
                 <a href="#" onclick="switchTab('booking'); return false;" style="color: #2b6cb0; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">
                   👉 通常画面（予約・日程）を見る
@@ -1006,6 +1154,10 @@
       const isEnded = (status === "開催終了");
       const isAccepting = (status === "受付中");
       const isDisabled = isUpcoming || isEnded;
+
+      const price = Number(event.price) || 0;
+      const isRewardTarget = !!event.payPayLinkDiscount;
+      const isRewardUnlocked = checkSeasonRewardUnlocked(event.season);
 
       const bookingCard = document.createElement("div");
       bookingCard.className = `card ${isDisabled ? 'disabled-card' : ''}`;
@@ -1074,6 +1226,18 @@
         optionsHtml += event.dates.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
       }
 
+      let couponCheckHtml = '';
+      if (isRewardTarget && isRewardUnlocked && !isDisabled) {
+        couponCheckHtml = `
+          <div class="coupon-check-box">
+            <input type="checkbox" id="coupon-checkbox-${eventId}">
+            <label for="coupon-checkbox-${eventId}" style="margin:0; cursor:pointer;">
+              🎟️ 100円引きクーポンを適用する (${price}円 ➔ ${price - 100}円)
+            </label>
+          </div>
+        `;
+      }
+
       let actionButtonsHtml = '';
       if (!isDisabled) {
         if (bookedDateRaw) {
@@ -1099,6 +1263,10 @@
           <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
         </div>
         <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
+        <div style="margin-bottom:6px;">
+          ${event.season ? `<span class="price-tag" style="background:#e2e8f0; margin-right:4px;">🗓️ ${escapeHtml(event.season)}</span>` : ''}
+          <span class="price-tag">${price > 0 ? `💰 参加費: ${price.toLocaleString()}円` : '🎁 参加費無料'}</span>
+        </div>
         <div class="catchphrase-box">💬 「${catchphrase}」</div>
         ${badgeHtml}
         <div class="section-box" style="${isDisabled ? 'background-color: #eaedf0;' : ''}">
@@ -1117,6 +1285,8 @@
           <select id="date-select-${eventId}" ${isDisabled ? 'disabled' : ''} onchange="handleSelectChange('${eventId}')">
             ${optionsHtml}
           </select>
+
+          ${couponCheckHtml}
 
           ${actionButtonsHtml}
         </div>
@@ -1155,7 +1325,7 @@
       const selectElem = document.getElementById(`date-select-${eventId}`);
       if (selectElem) selectElem.value = "CANCEL";
       
-      pendingBookingData = { eventId, selectedDate: "CANCEL" };
+      pendingBookingData = { eventId, selectedDate: "CANCEL", useCoupon: false };
       const eventName = masterEvents[eventId].name;
       const stampIcon = masterEvents[eventId].stampIcon || '🎬';
 
@@ -1178,6 +1348,8 @@
     function confirmBookingPrompt(eventId) {
       const selectElem = document.getElementById(`date-select-${eventId}`);
       const selectedDate = selectElem ? selectElem.value : "";
+      const couponCheckbox = document.getElementById(`coupon-checkbox-${eventId}`);
+      const useCoupon = couponCheckbox ? couponCheckbox.checked : false;
       
       if (!selectedDate) {
         alert("日程を選択してください。");
@@ -1191,7 +1363,7 @@
 
       const eventName = masterEvents[eventId].name;
       const stampIcon = masterEvents[eventId].stampIcon || '🎬';
-      pendingBookingData = { eventId, selectedDate };
+      pendingBookingData = { eventId, selectedDate, useCoupon };
 
       const modalTitle = document.getElementById("modal-title");
       const modalBody = document.getElementById("modal-body-text");
@@ -1200,8 +1372,9 @@
       modalTitle.innerText = "予約内容の確認";
       modalBody.innerHTML = `
         <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong><br>
-        日時：<strong>${escapeHtml(selectedDate)}</strong><br><br>
-        この日程で予約を確定しますか？
+        日時：<strong>${escapeHtml(selectedDate)}</strong><br>
+        ${useCoupon ? '<span style="color:#d35400; font-weight:bold;">🎟️ 100円引き特典クーポンを適用</span><br>' : ''}
+        <br>この日程で予約を確定しますか？
       `;
       confirmBtn.innerText = "確定する";
       confirmBtn.className = "";
@@ -1217,7 +1390,7 @@
 
     async function executeBooking() {
       if (!pendingBookingData) return;
-      const { eventId, selectedDate } = pendingBookingData;
+      const { eventId, selectedDate, useCoupon } = pendingBookingData;
       closeModal();
 
       showProcessing("予約を確定しています...");
@@ -1225,7 +1398,8 @@
       const payload = {
         action: "BOOKING",
         eventId: eventId,
-        detail: selectedDate
+        detail: selectedDate,
+        useCoupon: useCoupon
       };
 
       const res = await sendPost(payload);
@@ -1300,6 +1474,10 @@
 
     async function saveEventMaster(eventId) {
       const name = document.getElementById(`edit-name-${eventId}`).value.trim();
+      const season = document.getElementById(`edit-season-${eventId}`).value.trim();
+      const price = document.getElementById(`edit-price-${eventId}`).value.trim();
+      const payPayLink = document.getElementById(`edit-paypay-${eventId}`).value.trim();
+      const payPayLinkDiscount = document.getElementById(`edit-paypay-discount-${eventId}`).value.trim();
       const stampIcon = document.getElementById(`edit-icon-${eventId}`).value.trim();
       const imageUrl = document.getElementById(`edit-image-${eventId}`).value.trim();
       const catchphrase = document.getElementById(`edit-catchphrase-${eventId}`).value.trim();
@@ -1321,6 +1499,10 @@
         action: "UPDATE_EVENT_MASTER",
         eventId: eventId,
         name: name,
+        season: season,
+        price: price,
+        payPayLink: payPayLink,
+        payPayLinkDiscount: payPayLinkDiscount,
         stampIcon: stampIcon || "🎬",
         imageUrl: imageUrl,
         catchphrase: catchphrase,
