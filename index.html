@@ -466,6 +466,43 @@
 
     .chip.disabled { opacity: 0.5; cursor: not-allowed; }
 
+    /* 感想ギャラリー表示エリア */
+    .reaction-gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 10px 0 14px 0;
+      padding: 8px 12px;
+      background-color: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .reaction-gallery-title {
+      font-size: 0.75rem;
+      color: #64748b;
+      width: 100%;
+      margin-bottom: 2px;
+      font-weight: bold;
+    }
+    
+    .reaction-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      padding: 2px 8px;
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      color: #334155;
+    }
+    
+    .reaction-count {
+      font-weight: bold;
+      color: #2563eb;
+    }
+    
     .reaction-submit-btn {
       background-color: #34495e;
       color: #fff;
@@ -650,6 +687,48 @@
     function escapeHtml(str) {
       if (typeof str !== 'string') return str || '';
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    /**
+     * Googleカレンダー登録用URLを生成する関数
+     * @param {string} eventName イベント名
+     * @param {string} dateStr 候補日程文字列 (例: "10/01(水) 19:00〜")
+     */
+    function buildGoogleCalendarUrl(eventName, dateStr) {
+      if (!dateStr) return "#";
+      
+      // 現在の年を取得（例: 2026年）
+      const currentYear = new Date().getFullYear();
+      
+      // "10/01(水) 19:00〜" から 月, 日, 時間 を抽出
+      const match = dateStr.match(/(\d{1,2})\/(\d{1,2}).*?(\d{1,2}):(\d{2})/);
+      
+      let startIso = "";
+      let endIso = "";
+    
+      if (match) {
+        const month = String(match[1]).padStart(2, '0');
+        const day = String(match[2]).padStart(2, '0');
+        const hour = String(match[3]).padStart(2, '0');
+        const minute = String(match[4]).padStart(2, '0');
+    
+        // 開始日時 (例: 20261001T190000)
+        startIso = `${currentYear}${month}${day}T${hour}${minute}00`;
+    
+        // 終了日時は2時間後と仮定
+        const endHour = String((parseInt(hour, 10) + 2) % 24).padStart(2, '0');
+        endIso = `${currentYear}${month}${day}T${endHour}${minute}00`;
+      } else {
+        // 日時の抽出に失敗した場合は終日イベント扱いなどのフォールバック
+        startIso = `${currentYear}0101T000000`;
+        endIso = `${currentYear}0101T010000`;
+      }
+    
+      const title = encodeURIComponent(`🎬 上映会：${eventName}`);
+      const details = encodeURIComponent(`三鷹シェアハウス上映会にお越しください！\n作品: ${eventName}\n日時: ${dateStr}`);
+      const location = encodeURIComponent("シェアプレイス三鷹");
+    
+      return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startIso}/${endIso}&details=${details}&location=${location}`;
     }
 
     function formatDateOnly(dateStr) {
@@ -1250,7 +1329,15 @@
       let actionButtonsHtml = '';
       if (!isDisabled) {
         if (bookedDateRaw) {
+          const calUrl = buildGoogleCalendarUrl(event.name, bookedDateRaw);
           actionButtonsHtml = `
+            <div style="margin-bottom: 8px;">
+              <a href="${calUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
+                <button type="button" style="background-color: #4285F4; color: white; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  📅 Googleカレンダーに追加
+                </button>
+              </a>
+            </div>
             <div class="btn-group">
               <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')" style="flex:2;">日程を変更</button>
               <button class="btn-danger" onclick="triggerDirectCancel('${eventId}')" style="flex:1;">予約取消</button>
