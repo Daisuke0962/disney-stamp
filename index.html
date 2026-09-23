@@ -1231,6 +1231,34 @@
       });
     }
 
+    // レンダリング処理内でイベントカードのHTMLを組み立てる箇所
+    function createGalleryHtml(reactions) {
+      if (!reactions || Object.keys(reactions).length === 0) {
+        return ''; // まだリアクションがない場合は非表示（または「まだ感想はありません」を表示）
+      }
+    
+      let chipsHtml = '';
+      for (const [reactionText, count] of Object.entries(reactions)) {
+        chipsHtml += `
+          <span class="reaction-chip">
+            ${reactionText} <span class="reaction-count">${count}</span>
+          </span>
+        `;
+      }
+    
+      return `
+        <div class="reaction-gallery">
+          <div class="reaction-gallery-title">💬 みんなの期待・感想</div>
+          ${chipsHtml}
+        </div>
+      `;
+    }
+    
+    // 例：カード全体の表示領域（予約ボタン等の上など）に挿入
+    const galleryHtml = createGalleryHtml(event.reactions);
+    
+    // cardHtml 内に ${galleryHtml} を組み込む
+
     function renderBookingCard(eventId, container) {
       const event = masterEvents[eventId];
       const bookedDateRaw = userBookings[eventId];
