@@ -583,6 +583,7 @@
     let userStamps = [];
     let allBookings = []; 
     let isAdminMode = false;
+    let showAdminEdit = true; // 管理者編集モードのオン/オフ用フラグ
     let pendingBookingData = null;
 
     let availableSeasons = [];
@@ -610,9 +611,13 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 「通常画面を見る」を押した時の切り替え＆画面状態クリア関数
-    function resetAndSwitchToBooking() {
-      switchTab('booking');
+    // モード切替（通常画面 ⇄ 編集画面）
+    function toggleAdminViewMode(enableEdit) {
+      showAdminEdit = enableEdit;
+      renderApp();
+      if (!enableEdit) {
+        switchTab('stamps'); // 通常ユーザー視点のスタンプ画面に遷移
+      }
     }
 
     function toggleEmotionTag(eventId, tag, isDisabled) {
@@ -868,16 +873,20 @@
 
       const isRewardUnlocked = checkSeasonRewardUnlocked(currentSeason);
 
-      // ★ 管理者モード時のみ、スタンプラリータブの最上部に単一の「通常画面に戻る」リンクを配置
+      // ★ 管理者向け切り替えボタン（スタンプタブの最上部に設置）
       if (isAdminMode) {
-        const backToUserViewHtml = `
-          <div style="text-align: right; margin-bottom: 12px;">
-            <a href="#" onclick="resetAndSwitchToBooking(); return false;" style="color: #2b6cb0; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">
-              👉 通常画面（予約・日程）を見る
-            </a>
-          </div>
-        `;
-        stampsContainer.insertAdjacentHTML('beforeend', backToUserViewHtml);
+        const toggleModeBtnHtml = showAdminEdit
+          ? `<div style="text-align: right; margin-bottom: 12px;">
+              <a href="#" onclick="toggleAdminViewMode(false); return false;" style="color: #2b6cb0; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">
+                👁️ 通常表示（ユーザー視点）に切替
+              </a>
+             </div>`
+          : `<div style="text-align: right; margin-bottom: 12px;">
+              <a href="#" onclick="toggleAdminViewMode(true); return false;" style="color: #d35400; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">
+                ⚙️ 管理者編集モードに切替
+              </a>
+             </div>`;
+        stampsContainer.insertAdjacentHTML('beforeend', toggleModeBtnHtml);
       }
 
       const guideBox = document.createElement("div");
@@ -1039,7 +1048,8 @@
           `;
         }
 
-        if (isAdminMode) {
+        // 管理者かつ「編集モード」の時のみ入力フォームを表示
+        if (isAdminMode && showAdminEdit) {
           const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
           let bookingListHtml = eventBookings.length > 0
             ? eventBookings.map(b => `
