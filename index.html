@@ -53,6 +53,39 @@
       display: inline-block;
     }
 
+    /* 最上部シーズンセレクター */
+    .season-selector-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #ffffff;
+      border: 2px solid var(--primary-color);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .season-nav-btn {
+      background: #edf2f7;
+      border: 1px solid #cbd5e0;
+      color: #2d3748;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      cursor: pointer;
+      width: auto;
+    }
+    .season-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .season-title-display {
+      font-size: 1.15rem;
+      font-weight: bold;
+      color: var(--primary-color);
+      text-align: center;
+    }
+
     .tab-nav {
       display: flex;
       background: #e0e6ed;
@@ -103,38 +136,6 @@
       margin-bottom: 16px;
       font-size: 0.85rem;
       line-height: 1.5;
-    }
-
-    .season-selector-wrapper {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #ffffff;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 8px 12px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-    }
-
-    .season-nav-btn {
-      background: #edf2f7;
-      border: 1px solid #cbd5e0;
-      color: #2d3748;
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 0.8rem;
-      font-weight: bold;
-      cursor: pointer;
-      width: auto;
-    }
-    .season-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .season-title-display {
-      font-size: 1.05rem;
-      font-weight: bold;
-      color: var(--primary-color);
-      text-align: center;
     }
 
     .reward-unlocked-badge {
@@ -466,7 +467,6 @@
 
     .chip.disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* 感想ギャラリー表示エリア */
     .reaction-gallery {
       display: flex;
       flex-wrap: wrap;
@@ -619,13 +619,14 @@
     let userBookings = {};
     let userStamps = [];
     let allBookings = []; 
-    let allReactions = {}; // ★追加: 全体のリアクション集計保持変数
+    let allReactions = {};
     let isAdminMode = false;
     let showAdminEdit = true;
     let pendingBookingData = null;
 
     let availableSeasons = [];
     let currentSeason = "";
+    let activeTab = "booking"; // 'booking' または 'stamps'
 
     const EMOTION_TAGS = [
       "🥹 感動", "☕️ ほっこり", "🪄 余韻", "💡 発見",
@@ -635,6 +636,7 @@
     const selectedReactions = {};
 
     function switchTab(tabName) {
+      activeTab = tabName;
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
 
@@ -689,9 +691,6 @@
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
-    /**
-     * Googleカレンダー登録用URLを生成する関数
-     */
     function buildGoogleCalendarUrl(eventName, dateStr) {
       if (!dateStr) return "#";
       
@@ -722,9 +721,6 @@
       return `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startIso}/${endIso}&details=${details}&location=${location}`;
     }
 
-    /**
-     * LINE内ブラウザ回避用（Safari/Chromeでカレンダーを開く）
-     */
     function openExternalCalendar(url) {
       if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
         liff.openWindow({
@@ -736,9 +732,6 @@
       }
     }
 
-    /**
-     * リアクション（みんなの期待・感想）HTML生成関数
-     */
     function createGalleryHtml(reactions) {
       if (!reactions || Object.keys(reactions).length === 0) {
         return '';
@@ -897,7 +890,7 @@
         userBookings = data.userBookings || {};
         userStamps = data.userStamps || [];
         allBookings = data.allBookings || [];
-        allReactions = data.reactions || {}; // ★追加: リアクション集計を受け取って保持
+        allReactions = data.reactions || {};
         isAdminMode = !!data.isAdmin;
 
         const seasonSet = new Set();
@@ -955,25 +948,65 @@
         return;
       }
 
+      // ★1. 最上部に「シーズン選択ナビゲーション」を配置
+      const seasonIdx = availableSeasons.indexOf(currentSeason);
+      const prevSeasonDisabled = seasonIdx <= 0;
+      const nextSeasonDisabled = seasonIdx >= availableSeasons.length - 1;
+
+      const seasonSelectorHtml = `
+        <div class="season-selector-wrapper">
+          <button class="season-nav-btn" onclick="changeSeason(-1)" ${prevSeasonDisabled ? 'disabled' : ''}>◀ 過去</button>
+          <div class="season-title-display">🗓️️ ${escapeHtml(currentSeason)}</div>
+          <button class="season-nav-btn" onclick="changeSeason(1)" ${nextSeasonDisabled ? 'disabled' : ''}>次回 ▶</button>
+        </div>
+      `;
+
       container.innerHTML = `
+        ${seasonSelectorHtml}
+
         <div class="tab-nav">
-          <button id="btn-tab-booking" class="tab-btn active" onclick="switchTab('booking')">📅 上映予約・日程</button>
-          <button id="btn-tab-stamps" class="tab-btn" onclick="switchTab('stamps')">🎟️ スタンプカード</button>
+          <button id="btn-tab-booking" class="tab-btn ${activeTab === 'booking' ? 'active' : ''}" onclick="switchTab('booking')">📅 上映予約・日程</button>
+          <button id="btn-tab-stamps" class="tab-btn ${activeTab === 'stamps' ? 'active' : ''}" onclick="switchTab('stamps')">🎟️ スタンプカード</button>
         </div>
 
-        <div id="tab-booking" class="tab-content active"></div>
-        <div id="tab-stamps" class="tab-content"></div>
+        <div id="tab-booking" class="tab-content ${activeTab === 'booking' ? 'active' : ''}"></div>
+        <div id="tab-stamps" class="tab-content ${activeTab === 'stamps' ? 'active' : ''}"></div>
       `;
 
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
 
-      // --- スタンプラリーボード ---
-      const seasonIdx = availableSeasons.indexOf(currentSeason);
-      const prevSeasonDisabled = seasonIdx <= 0;
-      const nextSeasonDisabled = seasonIdx >= availableSeasons.length - 1;
-
+      // ★2. 現在選択されているシーズンのイベントのみを抽出
       const seasonEventKeys = validEventKeys.filter(id => masterEvents[id].season === currentSeason);
+
+      // --- 予約タブの描画（選択中のシーズンのみ） ---
+      const activeOrUpcomingTitle = document.createElement("div");
+      activeOrUpcomingTitle.className = "section-header-title";
+      activeOrUpcomingTitle.innerHTML = "📅 受付中／今後開催";
+      bookingContainer.appendChild(activeOrUpcomingTitle);
+
+      const seasonActiveOrUpcomingKeys = seasonEventKeys.filter(eventId => masterEvents[eventId].status !== "受付終了");
+
+      if (seasonActiveOrUpcomingKeys.length === 0) {
+        bookingContainer.insertAdjacentHTML('beforeend', '<p style="font-size:0.85rem; color:#666; margin-left:4px;">このシーズンで受付中・今後開催のイベントはありません。</p>');
+      } else {
+        seasonActiveOrUpcomingKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
+      }
+
+      const endedTitle = document.createElement("div");
+      endedTitle.className = "section-header-title";
+      endedTitle.innerHTML = "🔒 受付終了";
+      bookingContainer.appendChild(endedTitle);
+
+      const seasonEndedKeys = seasonEventKeys.filter(eventId => masterEvents[eventId].status === "受付終了");
+
+      if (seasonEndedKeys.length === 0) {
+        bookingContainer.insertAdjacentHTML('beforeend', '<p style="font-size:0.85rem; color:#666; margin-left:4px;">このシーズンで終了したイベントはありません。</p>');
+      } else {
+        seasonEndedKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
+      }
+
+      // --- スタンプカードタブの描画（選択中のシーズンのみ） ---
       const stampTargetKeys = seasonEventKeys.filter(id => !masterEvents[id].payPayLinkDiscount);
       const rewardTargetKeys = seasonEventKeys.filter(id => !!masterEvents[id].payPayLinkDiscount);
 
@@ -1009,15 +1042,6 @@
         </ol>
       `;
       stampsContainer.appendChild(guideBox);
-
-      const seasonSelectorHtml = `
-        <div class="season-selector-wrapper">
-          <button class="season-nav-btn" onclick="changeSeason(-1)" ${prevSeasonDisabled ? 'disabled' : ''}>◀ 過去</button>
-          <div class="season-title-display">${escapeHtml(currentSeason)}</div>
-          <button class="season-nav-btn" onclick="changeSeason(1)" ${nextSeasonDisabled ? 'disabled' : ''}>次回 ▶</button>
-        </div>
-      `;
-      stampsContainer.insertAdjacentHTML('beforeend', seasonSelectorHtml);
 
       if (isRewardUnlocked) {
         const rewardBadgeHtml = `
@@ -1079,185 +1103,162 @@
       `;
       stampsContainer.appendChild(stampBoard);
 
-      // --- 予約タブ ---
-      const activeOrUpcomingTitle = document.createElement("div");
-      activeOrUpcomingTitle.className = "section-header-title";
-      activeOrUpcomingTitle.innerHTML = "📅 受付中／今後開催";
-      bookingContainer.appendChild(activeOrUpcomingTitle);
-
-      const activeOrUpcomingKeys = validEventKeys.filter(eventId => masterEvents[eventId].status !== "開催終了");
-
-      if (activeOrUpcomingKeys.length === 0) {
-        bookingContainer.insertAdjacentHTML('beforeend', '<p style="font-size:0.85rem; color:#666; margin-left:4px;">現在受付中・今後開催のイベントはありません。</p>');
+      // ★3. スタンプタブ内の個別カードも「選択中シーズンのイベントのみ」を描画
+      if (seasonEventKeys.length === 0) {
+        stampsContainer.insertAdjacentHTML('beforeend', '<p style="text-align:center; color:#888; margin-top:20px;">このシーズンの詳細イベントはありません。</p>');
       } else {
-        activeOrUpcomingKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
-      }
+        seasonEventKeys.forEach(eventId => {
+          const event = masterEvents[eventId];
+          const isStamped = userStamps.includes(eventId);
+          const status = event.status || "受付中";
+          const stampIcon = event.stampIcon || '🎬';
 
-      const endedTitle = document.createElement("div");
-      endedTitle.className = "section-header-title";
-      endedTitle.innerHTML = "🔒 開催終了";
-      bookingContainer.appendChild(endedTitle);
+          const stampCard = document.createElement("div");
+          stampCard.className = `card ${status === '受付終了' || status === '今後開催' ? 'disabled-card' : ''}`;
+          
+          let badgeClass = 'not-got';
+          let badgeText = '📌 未出席 / スタンプ未獲得';
+          if (isStamped) {
+            badgeClass = 'got';
+            badgeText = `✅ スタンプ獲得済み ${stampIcon}`;
+          } else if (status === '今後開催') {
+            badgeClass = 'upcoming';
+            badgeText = '⏳ 今後開催';
+          } else if (status === '受付終了') {
+            badgeClass = 'ended';
+            badgeText = '🔒 受付終了';
+          }
 
-      const endedKeys = validEventKeys.filter(eventId => masterEvents[eventId].status === "開催終了");
+          const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
+          const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
+          const price = Number(event.price) || 0;
 
-      if (endedKeys.length === 0) {
-        bookingContainer.insertAdjacentHTML('beforeend', '<p style="font-size:0.85rem; color:#666; margin-left:4px;">終了したイベントはありません。</p>');
-      } else {
-        endedKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
-      }
-
-      // --- スタンプタブ（詳細カード） ---
-      validEventKeys.forEach(eventId => {
-        const event = masterEvents[eventId];
-        const isStamped = userStamps.includes(eventId);
-        const status = event.status || "受付中";
-        const stampIcon = event.stampIcon || '🎬';
-
-        const stampCard = document.createElement("div");
-        stampCard.className = `card ${status === '開催終了' || status === '今後開催' ? 'disabled-card' : ''}`;
-        
-        let badgeClass = 'not-got';
-        let badgeText = '📌 未出席 / スタンプ未獲得';
-        if (isStamped) {
-          badgeClass = 'got';
-          badgeText = `✅ スタンプ獲得済み ${stampIcon}`;
-        } else if (status === '今後開催') {
-          badgeClass = 'upcoming';
-          badgeText = '⏳ 今後開催';
-        } else if (status === '開催終了') {
-          badgeClass = 'ended';
-          badgeText = '🔒 開催終了';
-        }
-
-        const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
-        const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
-        const price = Number(event.price) || 0;
-
-        let stampHtml = `
-          <div class="poster-box">
-            <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
-          </div>
-          <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
-          <div style="margin-bottom:6px;">
-            ${event.season ? `<span class="price-tag" style="background:#e2e8f0; margin-right:4px;">🗓️ ${escapeHtml(event.season)}</span>` : ''}
-            <span class="price-tag">${price > 0 ? `💰 参加費: ${price.toLocaleString()}円` : '🎁 参加費無料'}</span>
-          </div>
-          <div class="catchphrase-box">💬 「${catchphrase}」</div>
-          <span class="stamp-badge ${badgeClass}">${badgeText}</span>
-        `;
-
-        if (!isStamped && status === '受付中') {
-          stampHtml += `
-            <div class="section-box">
-              <div class="section-title">💡 当日クイズ（正解でスタンプGET）</div>
-              <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>問題:</strong> ${escapeHtml(event.question || 'クイズ未設定')}</p>
-              <input type="text" id="answer-input-${eventId}" placeholder="回答を入力">
-              <button onclick="submitAnswer('${eventId}')" class="secondary">回答してスタンプを押す</button>
+          let stampHtml = `
+            <div class="poster-box">
+              <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
             </div>
-          `;
-        }
-
-        if (isAdminMode && showAdminEdit) {
-          const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
-          let bookingListHtml = eventBookings.length > 0
-            ? eventBookings.map(b => `
-                <div class="booking-item">
-                  <span><strong>${escapeHtml(b.displayName)}</strong> (${escapeHtml(b.selectedDate)})</span>
-                  <span style="color:#888;">${escapeHtml(b.timestamp)}</span>
-                </div>
-              `).join('')
-            : '<div style="font-size:0.8rem; color:#888;">まだ申し込みはありません。</div>';
-
-          stampHtml += `
-            <div class="admin-box">
-              <div class="section-title" style="color: #d35400;">⚙️ 管理者設定：マスター編集</div>
-              
-              <label>イベントID:</label>
-              <input type="text" value="${escapeHtml(eventId)}" disabled style="background:#e9ecef;">
-
-              <label>イベント名:</label>
-              <input type="text" id="edit-name-${eventId}" value="${escapeHtml(event.name)}">
-
-              <label>該当シーズン (例: 2026秋):</label>
-              <input type="text" id="edit-season-${eventId}" value="${escapeHtml(event.season || '')}">
-
-              <label>参加費 (0で無料):</label>
-              <input type="text" id="edit-price-${eventId}" value="${escapeHtml(event.price || '0')}">
-
-              <label>PayPay通常受け取りリンク:</label>
-              <input type="text" id="edit-paypay-${eventId}" value="${escapeHtml(event.payPayLink || '')}">
-
-              <label>PayPay100円引き受け取りリンク (入力ありで特典対象に):</label>
-              <input type="text" id="edit-paypay-discount-${eventId}" value="${escapeHtml(event.payPayLinkDiscount || '')}">
-
-              <label>スタンプアイコン絵文字:</label>
-              <input type="text" id="edit-icon-${eventId}" value="${escapeHtml(stampIcon)}">
-
-              <label>ポスター画像URL (https://):</label>
-              <input type="text" id="edit-image-${eventId}" value="${escapeHtml(event.imageUrl)}" placeholder="https://...">
-
-              <label>ひとこと魅力:</label>
-              <input type="text" id="edit-catchphrase-${eventId}" value="${escapeHtml(event.catchphrase)}">
-
-              <label>秘密の質問文:</label>
-              <input type="text" id="edit-question-${eventId}" value="${escapeHtml(event.question)}">
-
-              <label>正解コード:</label>
-              <input type="text" id="edit-answer-${eventId}" placeholder="GAS側で保持（変更時のみ入力）">
-
-              <label>候補日程①:</label>
-              <input type="text" id="edit-date1-${eventId}" value="${escapeHtml(event.dates[0] || '')}">
-              <label>候補日程②:</label>
-              <input type="text" id="edit-date2-${eventId}" value="${escapeHtml(event.dates[1] || '')}">
-              <label>候補日程③:</label>
-              <input type="text" id="edit-date3-${eventId}" value="${escapeHtml(event.dates[2] || '')}">
-
-              <label>ステータス:</label>
-              <select id="edit-status-${eventId}">
-                <option value="受付中" ${status === '受付中' ? 'selected' : ''}>受付中</option>
-                <option value="今後開催" ${status === '今後開催' ? 'selected' : ''}>今後開催</option>
-                <option value="開催終了" ${status === '開催終了' ? 'selected' : ''}>開催終了</option>
-              </select>
-
-              <button onclick="saveEventMaster('${eventId}')" class="admin-btn" style="margin-top:10px;">更新内容を保存</button>
-
-              <hr style="border:none; border-top:1px solid #f39c12; margin:16px 0;">
-
-              <div class="section-title" style="color:#d35400;">📋 予約一覧 (${eventBookings.length}件)</div>
-              <div class="booking-list-box">${bookingListHtml}</div>
+            <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
+            <div style="margin-bottom:6px;">
+              ${event.season ? `<span class="price-tag" style="background:#e2e8f0; margin-right:4px;">🗓️ ${escapeHtml(event.season)}</span>` : ''}
+              <span class="price-tag">${price > 0 ? `💰 参加費: ${price.toLocaleString()}円` : '🎁 参加費無料'}</span>
             </div>
+            <div class="catchphrase-box">💬 「${catchphrase}」</div>
+            <span class="stamp-badge ${badgeClass}">${badgeText}</span>
           `;
-        }
 
-        if (!selectedReactions[eventId]) selectedReactions[eventId] = new Set();
-        const isReactionDisabled = (status === '今後開催' || status === '開催終了');
+          if (!isStamped && status === '受付中') {
+            stampHtml += `
+              <div class="section-box">
+                <div class="section-title">💡 当日クイズ（正解でスタンプGET）</div>
+                <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>問題:</strong> ${escapeHtml(event.question || 'クイズ未設定')}</p>
+                <input type="text" id="answer-input-${eventId}" placeholder="回答を入力">
+                <button onclick="submitAnswer('${eventId}')" class="secondary">回答してスタンプを押す</button>
+              </div>
+            `;
+          }
 
-        stampHtml += `
-          <div class="reaction-section">
-            <div class="section-title" style="text-align:center;">✨ 心の動きを記録</div>
-            <div class="reaction-subtitle">観賞後の気持ちを選んで送信できます<br>(※複数選択可)</div>
-            <div class="reaction-chips" id="chips-${eventId}">
-              ${EMOTION_TAGS.map(tag => {
-                const isSelected = selectedReactions[eventId].has(tag);
-                return `
-                  <div class="chip ${isSelected ? 'selected' : ''} ${isReactionDisabled ? 'disabled' : ''}" 
-                       onclick="toggleEmotionTag('${eventId}', '${escapeHtml(tag)}',${isReactionDisabled})">
-                    ${escapeHtml(tag)}
+          if (isAdminMode && showAdminEdit) {
+            const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
+            let bookingListHtml = eventBookings.length > 0
+              ? eventBookings.map(b => `
+                  <div class="booking-item">
+                    <span><strong>${escapeHtml(b.displayName)}</strong> (${escapeHtml(b.selectedDate)})</span>
+                    <span style="color:#888;">${escapeHtml(b.timestamp)}</span>
                   </div>
-                `;
-              }).join('')}
-            </div>
-            <button id="reaction-btn-${eventId}" class="reaction-submit-btn" 
-                    onclick="sendMultipleReactions('${eventId}')" 
-                    ${isReactionDisabled || selectedReactions[eventId].size === 0 ? 'disabled' : ''}>
-              ${isReactionDisabled ? '受付時間外です' : '選択したリアクションを送る'}
-            </button>
-          </div>
-        `;
+                `).join('')
+              : '<div style="font-size:0.8rem; color:#888;">まだ申し込みはありません。</div>';
 
-        stampCard.innerHTML = stampHtml;
-        stampsContainer.appendChild(stampCard);
-      });
+            stampHtml += `
+              <div class="admin-box">
+                <div class="section-title" style="color: #d35400;">⚙️ 管理者設定：マスター編集</div>
+                
+                <label>イベントID:</label>
+                <input type="text" value="${escapeHtml(eventId)}" disabled style="background:#e9ecef;">
+
+                <label>イベント名:</label>
+                <input type="text" id="edit-name-${eventId}" value="${escapeHtml(event.name)}">
+
+                <label>該当シーズン (例: 2026秋):</label>
+                <input type="text" id="edit-season-${eventId}" value="${escapeHtml(event.season || '')}">
+
+                <label>参加費 (0で無料):</label>
+                <input type="text" id="edit-price-${eventId}" value="${escapeHtml(event.price || '0')}">
+
+                <label>PayPay通常受け取りリンク:</label>
+                <input type="text" id="edit-paypay-${eventId}" value="${escapeHtml(event.payPayLink || '')}">
+
+                <label>PayPay100円引き受け取りリンク (入力ありで特典対象に):</label>
+                <input type="text" id="edit-paypay-discount-${eventId}" value="${escapeHtml(event.payPayLinkDiscount || '')}">
+
+                <label>スタンプアイコン絵文字:</label>
+                <input type="text" id="edit-icon-${eventId}" value="${escapeHtml(stampIcon)}">
+
+                <label>ポスター画像URL (https://):</label>
+                <input type="text" id="edit-image-${eventId}" value="${escapeHtml(event.imageUrl)}" placeholder="https://...">
+
+                <label>ひとこと魅力:</label>
+                <input type="text" id="edit-catchphrase-${eventId}" value="${escapeHtml(event.catchphrase)}">
+
+                <label>秘密の質問文:</label>
+                <input type="text" id="edit-question-${eventId}" value="${escapeHtml(event.question)}">
+
+                <label>正解コード:</label>
+                <input type="text" id="edit-answer-${eventId}" placeholder="GAS側で保持（変更時のみ入力）">
+
+                <label>候補日程①:</label>
+                <input type="text" id="edit-date1-${eventId}" value="${escapeHtml(event.dates[0] || '')}">
+                <label>候補日程②:</label>
+                <input type="text" id="edit-date2-${eventId}" value="${escapeHtml(event.dates[1] || '')}">
+                <label>候補日程③:</label>
+                <input type="text" id="edit-date3-${eventId}" value="${escapeHtml(event.dates[2] || '')}">
+
+                <label>ステータス:</label>
+                <select id="edit-status-${eventId}">
+                  <option value="受付中" ${status === '受付中' ? 'selected' : ''}>受付中</option>
+                  <option value="今後開催" ${status === '今後開催' ? 'selected' : ''}>今後開催</option>
+                  <option value="受付終了" ${status === '受付終了' ? 'selected' : ''}>受付終了</option>
+                </select>
+
+                <button onclick="saveEventMaster('${eventId}')" class="admin-btn" style="margin-top:10px;">更新内容を保存</button>
+
+                <hr style="border:none; border-top:1px solid #f39c12; margin:16px 0;">
+
+                <div class="section-title" style="color:#d35400;">📋 予約一覧 (${eventBookings.length}件)</div>
+                <div class="booking-list-box">${bookingListHtml}</div>
+              </div>
+            `;
+          }
+
+          if (!selectedReactions[eventId]) selectedReactions[eventId] = new Set();
+          const isReactionDisabled = (status === '今後開催' || status === '受付終了');
+
+          stampHtml += `
+            <div class="reaction-section">
+              <div class="section-title" style="text-align:center;">✨ 心の動きを記録</div>
+              <div class="reaction-subtitle">観賞後の気持ちを選んで送信できます<br>(※複数選択可)</div>
+              <div class="reaction-chips" id="chips-${eventId}">
+                ${EMOTION_TAGS.map(tag => {
+                  const isSelected = selectedReactions[eventId].has(tag);
+                  return `
+                    <div class="chip ${isSelected ? 'selected' : ''} ${isReactionDisabled ? 'disabled' : ''}" 
+                         onclick="toggleEmotionTag('${eventId}', '${escapeHtml(tag)}',${isReactionDisabled})">
+                      ${escapeHtml(tag)}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+              <button id="reaction-btn-${eventId}" class="reaction-submit-btn" 
+                      onclick="sendMultipleReactions('${eventId}')" 
+                      ${isReactionDisabled || selectedReactions[eventId].size === 0 ? 'disabled' : ''}>
+                ${isReactionDisabled ? '受付時間外です' : '選択したリアクションを送る'}
+              </button>
+            </div>
+          `;
+
+          stampCard.innerHTML = stampHtml;
+          stampsContainer.appendChild(stampCard);
+        });
+      }
     }
 
     function renderBookingCard(eventId, container) {
@@ -1268,7 +1269,7 @@
       const stampIcon = event.stampIcon || '🎬';
 
       const isUpcoming = (status === "今後開催");
-      const isEnded = (status === "開催終了");
+      const isEnded = (status === "受付終了");
       const isAccepting = (status === "受付中");
       const isDisabled = isUpcoming || isEnded;
 
@@ -1276,7 +1277,6 @@
       const isRewardTarget = !!event.payPayLinkDiscount;
       const isRewardUnlocked = checkSeasonRewardUnlocked(event.season);
 
-      // ★追加: リアクションギャラリーの描画呼び出し
       const eventReactions = allReactions[eventId] || {};
       const galleryHtml = createGalleryHtml(eventReactions);
 
@@ -1285,7 +1285,7 @@
 
       let badgeHtml = '';
       if (isUpcoming) badgeHtml = '<span class="stamp-badge upcoming">⏳ 今後開催</span>';
-      if (isEnded) badgeHtml = '<span class="stamp-badge ended">🔒 開催終了</span>';
+      if (isEnded) badgeHtml = '<span class="stamp-badge ended">🔒 受付終了</span>';
 
       const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
       const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
@@ -1397,7 +1397,7 @@
         <div class="catchphrase-box">💬 「${catchphrase}」</div>
         ${badgeHtml}
         
-        ${galleryHtml} <!-- ★追加: 感想ギャラリーをキャッチコピー下に挿入 -->
+        ${galleryHtml}
 
         <div class="section-box" style="${isDisabled ? 'background-color: #eaedf0;' : ''}">
           <div class="section-title">📅 参加日程</div>
@@ -1681,7 +1681,6 @@
         if (container) container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
         if (btn) btn.disabled = true;
 
-        // ★追加: リアクション送信後に最新ステータスを読込直してギャラリーを即時更新
         resetToInitialLoading();
         await loadStatus();
       } else {
