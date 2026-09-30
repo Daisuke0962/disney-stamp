@@ -901,8 +901,55 @@
         });
         availableSeasons = Array.from(seasonSet);
         if (availableSeasons.length === 0) availableSeasons = ["2026秋"];
+
+        // ★ 日付に基づく「現在（デフォルト）のシーズン」動的判定処理
         if (!currentSeason || !availableSeasons.includes(currentSeason)) {
-          currentSeason = availableSeasons[availableSeasons.length - 1];
+          const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+          const seasonEndDates = {};
+
+          Object.values(masterEvents).forEach(ev => {
+            const season = ev.season ? ev.season.trim() : "";
+            if (!season) return;
+
+            // 候補日程①〜③から YYYY-MM-DD 形式の日付文字列を抽出
+            const dates = (ev.dates || [])
+              .filter(d => d && d.trim() !== "")
+              .map(d => {
+                const raw = d.trim();
+                const match = raw.match(/(\d{4})?[-\/]?(\d{1,2})[-\/](\d{1,2})/);
+                if (match) {
+                  const year = match[1] || new Date().getFullYear();
+                  const month = String(match[2]).padStart(2, '0');
+                  const day = String(match[3]).padStart(2, '0');
+                  return `${year}-${month}-${day}`;
+                }
+                return "";
+              })
+              .filter(d => d !== "");
+
+            if (dates.length > 0) {
+              const maxDateInEvent = dates.reduce((a, b) => (a > b ? a : b));
+              if (!seasonEndDates[season] || maxDateInEvent > seasonEndDates[season]) {
+                seasonEndDates[season] = maxDateInEvent;
+              }
+            }
+          });
+
+          // 今日が最終日以前になっているシーズンを時系列順に検索
+          let matchedSeason = null;
+          for (const season of availableSeasons) {
+            const endDate = seasonEndDates[season];
+            if (endDate && today <= endDate) {
+              matchedSeason = season;
+              break;
+            }
+          }
+
+          if (matchedSeason) {
+            currentSeason = matchedSeason;
+          } else {
+            currentSeason = availableSeasons[availableSeasons.length - 1];
+          }
         }
 
         document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様 ${isAdminMode ? ' (管理者)' : ''}`;
@@ -948,7 +995,7 @@
         return;
       }
 
-      // ★1. 最上部に「シーズン選択ナビゲーション」を配置
+      // 最上部に「シーズン選択ナビゲーション」を配置
       const seasonIdx = availableSeasons.indexOf(currentSeason);
       const prevSeasonDisabled = seasonIdx <= 0;
       const nextSeasonDisabled = seasonIdx >= availableSeasons.length - 1;
@@ -956,7 +1003,7 @@
       const seasonSelectorHtml = `
         <div class="season-selector-wrapper">
           <button class="season-nav-btn" onclick="changeSeason(-1)" ${prevSeasonDisabled ? 'disabled' : ''}>◀ 過去</button>
-          <div class="season-title-display">🗓️️ ${escapeHtml(currentSeason)}</div>
+          <div class="season-title-display">🗓 ${escapeHtml(currentSeason)}</div>
           <button class="season-nav-btn" onclick="changeSeason(1)" ${nextSeasonDisabled ? 'disabled' : ''}>次回 ▶</button>
         </div>
       `;
@@ -976,10 +1023,10 @@
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
 
-      // ★2. 現在選択されているシーズンのイベントのみを抽出
+      // 現在選択されているシーズンのイベントのみを抽出
       const seasonEventKeys = validEventKeys.filter(id => masterEvents[id].season === currentSeason);
 
-      // --- 予約タブの描画（選択中のシーズンのみ） ---
+      // --- 予約タブの描画 ---
       const activeOrUpcomingTitle = document.createElement("div");
       activeOrUpcomingTitle.className = "section-header-title";
       activeOrUpcomingTitle.innerHTML = "📅 受付中／今後開催";
@@ -1006,7 +1053,7 @@
         seasonEndedKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
       }
 
-      // --- スタンプカードタブの描画（選択中のシーズンのみ） ---
+      // --- スタンプカードタブの描画 ---
       const stampTargetKeys = seasonEventKeys.filter(id => !masterEvents[id].payPayLinkDiscount);
       const rewardTargetKeys = seasonEventKeys.filter(id => !!masterEvents[id].payPayLinkDiscount);
 
@@ -1103,7 +1150,6 @@
       `;
       stampsContainer.appendChild(stampBoard);
 
-      // ★3. スタンプタブ内の個別カードも「選択中シーズンのイベントのみ」を描画
       if (seasonEventKeys.length === 0) {
         stampsContainer.insertAdjacentHTML('beforeend', '<p style="text-align:center; color:#888; margin-top:20px;">このシーズンの詳細イベントはありません。</p>');
       } else {
@@ -1170,7 +1216,7 @@
 
             stampHtml += `
               <div class="admin-box">
-                <div class="section-title" style="color: #d35400;">⚙️ 管理者設定：マスター編集</div>
+                <div class="section-title" style="color: #d35400;">⚙️️ 管理者設定：マスター編集</div>
                 
                 <label>イベントID:</label>
                 <input type="text" value="${escapeHtml(eventId)}" disabled style="background:#e9ecef;">
