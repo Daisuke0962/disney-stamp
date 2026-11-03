@@ -782,7 +782,10 @@
       if (!dateStr) return "#";
       
       const currentYear = new Date().getFullYear();
-      const match = dateStr.match(/(\d{1,2})\/(\d{1,2}).*?(\d{1,2}):(\d{2})/);
+      
+      // 文字列から「月」「日」「時」「分」をより確実に抽出すべく正規表現を調整
+      // 例: "10/29(木) 20:00" や "10/29 20:00" に対応
+      const match = String(dateStr).match(/(\d{1,2})[\/\-](\d{1,2})(?:[^\d]+(\d{1,2}):(\d{2}))?/);
       
       let startIso = "";
       let endIso = "";
@@ -790,15 +793,28 @@
       if (match) {
         const month = String(match[1]).padStart(2, '0');
         const day = String(match[2]).padStart(2, '0');
-        const hour = String(match[3]).padStart(2, '0');
-        const minute = String(match[4]).padStart(2, '0');
+        // 時間が含まれていない場合はデフォルトで20:00開始にするなどの配慮
+        const hour = match[3] ? String(match[3]).padStart(2, '0') : "20";
+        const minute = match[4] ? String(match[4]).padStart(2, '0') : "00";
     
         startIso = `${currentYear}${month}${day}T${hour}${minute}00`;
-        const endHour = String((parseInt(hour, 10) + 2) % 24).padStart(2, '0');
-        endIso = `${currentYear}${month}${day}T${endHour}${minute}00`;
+        
+        // 終了時間は開始時間の2時間後に設定
+        let endHourNum = parseInt(hour, 10) + 2;
+        const endHour = String(endHourNum % 24).padStart(2, '0');
+        // 日付をまたぐ簡易処理（同日計算）
+        let endDay = day;
+        if (endHourNum >= 24) {
+          endDay = String(parseInt(day, 10) + 1).padStart(2, '0');
+        }
+        endIso = `${currentYear}${month}${endDay}T${endHour}${minute}00`;
       } else {
-        startIso = `${currentYear}0101T000000`;
-        endIso = `${currentYear}0101T010000`;
+        // 万が一パースできなかった場合のフォールバック（今日の日付にする等）
+        const now = new Date();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        startIso = `${currentYear}${m}${d}T200000`;
+        endIso = `${currentYear}${m}${d}T220000`;
       }
     
       const title = encodeURIComponent(`🎬 上映会：${eventName}`);
