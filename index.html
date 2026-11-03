@@ -754,6 +754,34 @@
       `;
     }
 
+    // ★ 曜日付きの表示形式に変換する専用関数（例: 10/29(木) や 10/29(木) 20:00）
+    function formatDateWithDay(dateStr) {
+      if (!dateStr) return "";
+      
+      const days = ["日", "月", "火", "水", "木", "金", "土"];
+      let d = new Date(dateStr);
+    
+      // 年が含まれていない "10/29 20:00" などのパターンを考慮
+      if (isNaN(d.getTime())) {
+        const currentYear = new Date().getFullYear();
+        d = new Date(`${currentYear}/${dateStr}`);
+      }
+    
+      if (!isNaN(d.getTime())) {
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dayName = days[d.getDay()];
+        
+        // 時間（HH:mm）が含まれている場合は時間も後ろにつける
+        const timeMatch = String(dateStr).match(/(\d{1,2}:\d{2})/);
+        const timeStr = timeMatch ? ` ${timeMatch[1]}` : "";
+    
+        return `${month}/${day}(${dayName})${timeStr}`;
+      }
+    
+      return dateStr; // パースできない場合はそのまま返す
+    }
+
     function formatDateOnly(dateStr) {
       if (!dateStr) return "";
       const d = new Date(dateStr);
