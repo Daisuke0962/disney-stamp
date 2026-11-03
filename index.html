@@ -138,18 +138,45 @@
       line-height: 1.5;
     }
 
-    .reward-unlocked-badge {
-      background: linear-gradient(135deg, #fff9db 0%, #fff3bf 100%);
-      border: 2px solid #fcc419;
+    /* ステップ報酬のアンロック表示バッジ */
+    .reward-tier-box {
+      background: #ffffff;
+      border: 2px solid #f39c12;
       border-radius: 12px;
-      padding: 12px;
-      text-align: center;
+      padding: 14px;
       margin-bottom: 16px;
-      color: #856404;
+      box-shadow: 0 4px 10px rgba(243, 156, 18, 0.15);
+    }
+    .reward-tier-title {
       font-weight: bold;
-      font-size: 0.9rem;
-      box-shadow: 0 4px 10px rgba(243, 156, 18, 0.2);
-      animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      font-size: 0.95rem;
+      color: #d35400;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .reward-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      background: #fdf6ec;
+      border: 1px dashed #f39c12;
+    }
+    .reward-item.unlocked {
+      background: #f0fdf4;
+      border: 1px solid var(--success-color);
+      color: #166534;
+      font-weight: bold;
+    }
+    .reward-item.locked {
+      background: #f8f9fa;
+      border: 1px solid #e2e8f0;
+      color: #a0aec0;
     }
 
     .stamp-board {
@@ -193,7 +220,6 @@
     }
 
     .stamp-cell.stamped { background-color: #f0fdf4; border-color: var(--success-color); }
-    .stamp-cell.reward-cell { border-style: dashed; border-color: #f39c12; background-color: #fffdf5; }
     .stamp-mark { font-size: 2.5rem; line-height: 1; margin-bottom: 4px; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     .stamp-empty { font-size: 1.8rem; color: #ccc; font-weight: bold; margin-bottom: 4px; }
     .stamp-event-name { font-size: 0.7rem; font-weight: bold; color: #555; width: 100%; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2; }
@@ -672,22 +698,18 @@
 
     let availableSeasons = [];
     let currentSeason = "";
-    let activeTab = "booking"; // 'booking' または 'stamps'
+    let activeTab = "booking";
 
     const EMOTION_TAGS = [
-      "🥹 感동", "☕️ ほっこり", "🪄 余韻", "💡 発見",
+      "🥹 感動", "☕️ ほっこり", "🪄 余韻", "💡 発見",
       "🍃 すっきり", "❤️ 愛おしい", "☕️ 穏やか", "✨ 高揚"
     ];
 
     const selectedReactions = {};
-
-    // 選択中の日付を一時保持するオブジェクト（重複なしの正しい定義）
     const selectedDatesState = {};
     
     function selectDateChip(eventId, dateVal) {
       selectedDatesState[eventId] = dateVal;
-    
-      // 該当イベントのすべてのチップから selected を外し、押されたものだけ付与
       const container = document.getElementById(`date-chips-${eventId}`);
       if (container) {
         container.querySelectorAll('.date-chip-btn').forEach(btn => {
@@ -788,60 +810,37 @@
 
     function openExternalCalendar(url) {
       if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
-        liff.openWindow({
-          url: url,
-          external: true
-        });
+        liff.openWindow({ url: url, external: true });
       } else {
         window.open(url, '_blank');
       }
     }
 
     function createGalleryHtml(reactions) {
-      if (!reactions || Object.keys(reactions).length === 0) {
-        return '';
-      }
-    
+      if (!reactions || Object.keys(reactions).length === 0) return '';
       let chipsHtml = '';
       for (const [reactionText, count] of Object.entries(reactions)) {
-        chipsHtml += `
-          <span class="reaction-chip">
-            ${escapeHtml(reactionText)} <span class="reaction-count">${count}</span>
-          </span>
-        `;
+        chipsHtml += `<span class="reaction-chip">${escapeHtml(reactionText)} <span class="reaction-count">${count}</span></span>`;
       }
-    
-      return `
-        <div class="reaction-gallery">
-          <div class="reaction-gallery-title">💬 みんなの期待・感想</div>
-          ${chipsHtml}
-        </div>
-      `;
+      return `<div class="reaction-gallery"><div class="reaction-gallery-title">💬 みんなの期待・感想</div>${chipsHtml}</div>`;
     }
 
-    // ★ 曜日付きの表示形式に変換する専用関数
     function formatDateWithDay(dateStr) {
       if (!dateStr) return "";
-      
       const days = ["日", "月", "火", "水", "木", "金", "土"];
       let d = new Date(dateStr);
-    
       if (isNaN(d.getTime())) {
         const currentYear = new Date().getFullYear();
         d = new Date(`${currentYear}/${dateStr}`);
       }
-    
       if (!isNaN(d.getTime())) {
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         const dayName = days[d.getDay()];
-        
         const timeMatch = String(dateStr).match(/(\d{1,2}:\d{2})/);
         const timeStr = timeMatch ? ` ${timeMatch[1]}` : "";
-    
         return `${month}/${day}(${dayName})${timeStr}`;
       }
-    
       return dateStr;
     }
 
@@ -862,7 +861,6 @@
       const bar = document.getElementById("progress-bar");
       const statusText = document.getElementById("status-text");
       const percentText = document.getElementById("progress-percent");
-      
       if (bar) bar.style.width = percent + "%";
       if (statusText) statusText.innerText = text;
       if (percentText) percentText.innerText = Math.floor(percent) + "%";
@@ -871,30 +869,17 @@
     function showError(message, detail = "") {
       const container = document.getElementById("error-container");
       if (!container) return;
-    
       if (detail === "unauthorized" || message.includes("unauthorized")) {
         container.innerHTML = `
           <div class="error-box" style="text-align: center; padding: 20px 16px;">
             <div style="font-size: 2.5rem; margin-bottom: 8px;">📱</div>
             <strong style="font-size: 1rem; color: #2c3e50;">スマートフォンでご利用ください</strong><br><br>
-            <span style="font-size: 0.85rem; color: #555; line-height: 1.6;">
-              本アプリはLINEログイン認証が必要です。<br>
-              PCブラウザからはログインできない仕様となっております。<br><br>
-              恐れ入りますが、<strong>スマートフォンのLINEアプリ内</strong>からリンクを開き直してご利用ください。
-            </span>
+            <span style="font-size: 0.85rem; color: #555; line-height: 1.6;">本アプリはLINEログイン認証が必要です。</span>
           </div>
         `;
         return;
       }
-    
-      container.innerHTML = `
-        <div class="error-box">
-          <strong>エラーが発生しました:</strong><br>
-          ${escapeHtml(message)}
-          ${detail ? `<br><small style="opacity:0.8;">詳細: ${escapeHtml(detail)}</small>` : ''}
-        </div>
-        <button onclick="location.reload()" style="margin-top:15px; background-color:#e74c3c;">再読み込み</button>
-      `;
+      container.innerHTML = `<div class="error-box"><strong>エラーが発生しました:</strong><br>${escapeHtml(message)}</div>`;
     }
 
     function showProcessing(message = "処理中...") {
@@ -914,21 +899,13 @@
       }
       
       updateProgress(20, "LINEアカウント認証中...");
-      
       try {
-        await liff.init({
-          liffId: LIFF_ID, 
-          withLoginOnExternalBrowser: true
-        });
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
+        await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+        if (!liff.isLoggedIn()) { liff.login(); return; }
         const profile = await liff.getProfile();
         currentUser.displayName = profile.displayName;
       } catch (err) {
-        console.error("LIFF Init Error:", err);
-        showError("LINEログインの初期化に失敗しました。LINEアプリ内から開いてください。");
+        showError("LINEログインの初期化に失敗しました。");
         return;
       }
 
@@ -939,41 +916,24 @@
     async function loadStatus() {
       let currentPercent = 30;
       const progressTimer = setInterval(() => {
-        if (currentPercent < 85) {
-          currentPercent += 2;
-          updateProgress(currentPercent, "最新データを読み込み中...");
-        }
+        if (currentPercent < 85) { currentPercent += 2; updateProgress(currentPercent, "最新データを読み込み中..."); }
       }, 300);
 
       try {
         const idToken = liff.getIDToken();
-        if (!idToken) {
-          clearInterval(progressTimer);
-          showError("認証トークンが取得できませんでした。ページを再読み込みするか、LINEアプリ内から再開してください。");
-          return;
-        }
+        if (!idToken) { clearInterval(progressTimer); showError("認証トークンが取得できませんでした。"); return; }
         
         const response = await fetch(GAS_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({
-            action: "GET_STATUS",
-            idToken: idToken
-          })
+          body: JSON.stringify({ action: "GET_STATUS", idToken: idToken })
         });
         
         clearInterval(progressTimer);
         if (!response.ok) throw new Error(`HTTPエラー Status: ${response.status}`);
 
         const data = await response.json();
-
-        if (!data.ok) {
-          if (data.error === 'unauthorized') {
-            showError("認証トークンの検証に失敗しました。LINEアプリから再度お試しいただくか、再ログインしてください。", "unauthorized");
-            return;
-          }
-          throw new Error(data.error || "データ取得失敗");
-        }
+        if (!data.ok) throw new Error(data.error || "データ取得失敗");
 
         updateProgress(95, "画面を作成中...");
 
@@ -986,58 +946,13 @@
 
         const seasonSet = new Set();
         Object.values(masterEvents).forEach(ev => {
-          if (ev.season && ev.season.trim() !== "") {
-            seasonSet.add(ev.season.trim());
-          }
+          if (ev.season && ev.season.trim() !== "") seasonSet.add(ev.season.trim());
         });
         availableSeasons = Array.from(seasonSet);
         if (availableSeasons.length === 0) availableSeasons = ["2026秋"];
 
         if (!currentSeason || !availableSeasons.includes(currentSeason)) {
-          const today = new Date().toISOString().split('T')[0];
-          const seasonEndDates = {};
-
-          Object.values(masterEvents).forEach(ev => {
-            const season = ev.season ? ev.season.trim() : "";
-            if (!season) return;
-
-            const dates = (ev.dates || [])
-              .filter(d => d && d.trim() !== "")
-              .map(d => {
-                const raw = d.trim();
-                const match = raw.match(/(\d{4})?[-\/]?(\d{1,2})[-\/](\d{1,2})/);
-                if (match) {
-                  const year = match[1] || new Date().getFullYear();
-                  const month = String(match[2]).padStart(2, '0');
-                  const day = String(match[3]).padStart(2, '0');
-                  return `${year}-${month}-${day}`;
-                }
-                return "";
-              })
-              .filter(d => d !== "");
-
-            if (dates.length > 0) {
-              const maxDateInEvent = dates.reduce((a, b) => (a > b ? a : b));
-              if (!seasonEndDates[season] || maxDateInEvent > seasonEndDates[season]) {
-                seasonEndDates[season] = maxDateInEvent;
-              }
-            }
-          });
-
-          let matchedSeason = null;
-          for (const season of availableSeasons) {
-            const endDate = seasonEndDates[season];
-            if (endDate && today <= endDate) {
-              matchedSeason = season;
-              break;
-            }
-          }
-
-          if (matchedSeason) {
-            currentSeason = matchedSeason;
-          } else {
-            currentSeason = availableSeasons[availableSeasons.length - 1];
-          }
+          currentSeason = availableSeasons[availableSeasons.length - 1];
         }
 
         document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様 ${isAdminMode ? ' (管理者)' : ''}`;
@@ -1061,18 +976,17 @@
       }
     }
 
-    function checkSeasonRewardUnlocked(seasonName) {
-      const seasonEvents = Object.keys(masterEvents).filter(id => {
+    // ★ ステップごとの達成判定関数
+    function getSeasonStampCount(seasonName) {
+      const seasonEventKeys = Object.keys(masterEvents).filter(id => {
         const ev = masterEvents[id];
         return ev.season === seasonName && !ev.payPayLinkDiscount;
       });
-      if (seasonEvents.length === 0) return false;
-      return seasonEvents.every(id => userStamps.includes(id));
+      return seasonEventKeys.filter(id => userStamps.includes(id)).length;
     }
 
     function renderApp() {
       const container = document.getElementById("content");
-      
       const validEventKeys = Object.keys(masterEvents).filter(eventId => {
         const ev = masterEvents[eventId];
         return eventId && ev && ev.name && ev.name.trim() !== "";
@@ -1084,43 +998,37 @@
       }
 
       const seasonIdx = availableSeasons.indexOf(currentSeason);
-      const prevSeasonDisabled = seasonIdx <= 0;
-      const nextSeasonDisabled = seasonIdx >= availableSeasons.length - 1;
-
       const seasonSelectorHtml = `
         <div class="season-selector-wrapper">
-          <button class="season-nav-btn" onclick="changeSeason(-1)" ${prevSeasonDisabled ? 'disabled' : ''}>◀ 過去</button>
+          <button class="season-nav-btn" onclick="changeSeason(-1)" ${seasonIdx <= 0 ? 'disabled' : ''}>◀ 過去</button>
           <div class="season-title-display">🗓 ${escapeHtml(currentSeason)}</div>
-          <button class="season-nav-btn" onclick="changeSeason(1)" ${nextSeasonDisabled ? 'disabled' : ''}>次回 ▶</button>
+          <button class="season-nav-btn" onclick="changeSeason(1)" ${seasonIdx >= availableSeasons.length - 1 ? 'disabled' : ''}>次回 ▶</button>
         </div>
       `;
 
       container.innerHTML = `
         ${seasonSelectorHtml}
-
         <div class="tab-nav">
           <button id="btn-tab-booking" class="tab-btn ${activeTab === 'booking' ? 'active' : ''}" onclick="switchTab('booking')">📅 上映予約・日程</button>
           <button id="btn-tab-stamps" class="tab-btn ${activeTab === 'stamps' ? 'active' : ''}" onclick="switchTab('stamps')">🎟️ スタンプカード</button>
         </div>
-
         <div id="tab-booking" class="tab-content ${activeTab === 'booking' ? 'active' : ''}"></div>
         <div id="tab-stamps" class="tab-content ${activeTab === 'stamps' ? 'active' : ''}"></div>
       `;
 
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
-
       const seasonEventKeys = validEventKeys.filter(id => masterEvents[id].season === currentSeason);
 
+      // --- 予約タブ ---
       const activeOrUpcomingTitle = document.createElement("div");
       activeOrUpcomingTitle.className = "section-header-title";
       activeOrUpcomingTitle.innerHTML = "📅 受付中／今後開催";
       bookingContainer.appendChild(activeOrUpcomingTitle);
 
       const seasonActiveOrUpcomingKeys = seasonEventKeys.filter(eventId => masterEvents[eventId].status !== "受付終了");
-
       if (seasonActiveOrUpcomingKeys.length === 0) {
-        bookingContainer.insertAdjacentHTML('beforeend', '<p style="font-size:0.85rem; color:#666; margin-left:4px;">このシーズンで受付中・今後開催のイベントはありません。</p>');
+        bookingContainer.insertAdjacentHTML('beforeend', '<p style="font-size:0.85rem; color:#666; margin-left:4px;">このシーズンで受付中のイベントはありません。</p>');
       } else {
         seasonActiveOrUpcomingKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
       }
@@ -1131,58 +1039,63 @@
       bookingContainer.appendChild(endedTitle);
 
       const seasonEndedKeys = seasonEventKeys.filter(eventId => masterEvents[eventId].status === "受付終了");
-
       if (seasonEndedKeys.length === 0) {
         bookingContainer.insertAdjacentHTML('beforeend', '<p style="font-size:0.85rem; color:#666; margin-left:4px;">このシーズンで終了したイベントはありません。</p>');
       } else {
         seasonEndedKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
       }
 
+      // --- スタンプカードタブ ---
       const stampTargetKeys = seasonEventKeys.filter(id => !masterEvents[id].payPayLinkDiscount);
       const rewardTargetKeys = seasonEventKeys.filter(id => !!masterEvents[id].payPayLinkDiscount);
+      const stampedCount = getSeasonStampCount(currentSeason);
+      const totalCount = stampTargetKeys.length || 1;
+      const progressPercent = Math.min(100, Math.floor((stampedCount / totalCount) * 100));
 
-      const stampedCountInSeason = stampTargetKeys.filter(id => userStamps.includes(id)).length;
-      const totalStampTargetCount = stampTargetKeys.length || 1;
-      const progressPercent = Math.min(100, Math.floor((stampedCountInSeason / totalStampTargetCount) * 100));
-
-      const isRewardUnlocked = checkSeasonRewardUnlocked(currentSeason);
+      // ステップ報酬の達成状況判定
+      const has1 = stampedCount >= 1;
+      const has3 = stampedCount >= 3;
+      const has5 = stampedCount >= 5;
 
       if (isAdminMode) {
         const toggleModeBtnHtml = showAdminEdit
-          ? `<div style="text-align: right; margin-bottom: 12px;">
-              <a href="#" onclick="toggleAdminViewMode(false); return false;" style="color: #2b6cb0; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">
-                👁️ 通常表示（ユーザー視点）に切替
-              </a>
-             </div>`
-          : `<div style="text-align: right; margin-bottom: 12px;">
-              <a href="#" onclick="toggleAdminViewMode(true); return false;" style="color: #d35400; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">
-                ⚙️ 管理者編集モードに切替
-              </a>
-             </div>`;
+          ? `<div style="text-align: right; margin-bottom: 12px;"><a href="#" onclick="toggleAdminViewMode(false); return false;" style="color: #2b6cb0; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">👁️ 通常表示に切替</a></div>`
+          : `<div style="text-align: right; margin-bottom: 12px;"><a href="#" onclick="toggleAdminViewMode(true); return false;" style="color: #d35400; font-weight: bold; font-size: 0.85rem; text-decoration: underline;">⚙️ 管理者編集モードに切替</a></div>`;
         stampsContainer.insertAdjacentHTML('beforeend', toggleModeBtnHtml);
       }
 
       const guideBox = document.createElement("div");
       guideBox.className = "guide-box";
       guideBox.innerHTML = `
-        <div style="font-weight: bold; color: #d48806; margin-bottom: 4px;">💡 スタンプの集め方</div>
+        <div style="font-weight: bold; color: #d48806; margin-bottom: 4px;">💡 スタンプ & ステップ特典のルール</div>
         <ol style="margin: 0; padding-left: 18px; color: #555;">
-          <li>上映会に参加して、会場で発表される<strong>「クイズのキーワード」</strong>をチェック！</li>
-          <li>下の各上映会から回答を入力して送信するとスタンプを獲得できます🎉</li>
-          <li>コンプリートすると<strong>100円引きクーポン</strong>をGET！</li>
+          <li>上映会に参加してクイズに正解するとスタンプGET！🎉</li>
+          <li><strong>スタンプ 1個</strong> ➔ 簡単な景品（特等席指定など）GET！</li>
+          <li><strong>スタンプ 3個</strong> ➔ 🥤 ドリンク無料特典アンロック！</li>
+          <li><strong>スタンプ 5個</strong> ➔ 🍽️ 食事割引クーポン発行！</li>
         </ol>
       `;
       stampsContainer.appendChild(guideBox);
 
-      if (isRewardUnlocked) {
-        const rewardBadgeHtml = `
-          <div class="reward-unlocked-badge">
-            🎉 ${escapeHtml(currentSeason)} コンプリート達成！<br>
-            <span style="font-size:0.8rem; font-weight:normal;">フィナーレ用「100円引きクーポン」が利用可能です！</span>
+      // ステップ報酬アンロック状況カード
+      const rewardTierHtml = `
+        <div class="reward-tier-box">
+          <div class="reward-tier-title">🎁 ステップ報酬の達成状況（現在 ${stampedCount}個獲得）</div>
+          <div class="reward-item ${has1 ? 'unlocked' : 'locked'}">
+            <span>スタンプ1個：ささやかな景品</span>
+            <span>${has1 ? '✅ 達成！' : '🔒 あと ' + Math.max(0, 1 - stampedCount) + '個'}</span>
           </div>
-        `;
-        stampsContainer.insertAdjacentHTML('beforeend', rewardBadgeHtml);
-      }
+          <div class="reward-item ${has3 ? 'unlocked' : 'locked'}">
+            <span>スタンプ3個：ドリンク無料特典</span>
+            <span>${has3 ? '✅ 達成！' : '🔒 あと ' + Math.max(0, 3 - stampedCount) + '個'}</span>
+          </div>
+          <div class="reward-item ${has5 ? 'unlocked' : 'locked'}">
+            <span>スタンプ5個：食事割引クーポン</span>
+            <span>${has5 ? '✅ 達成！' : '🔒 あと ' + Math.max(0, 5 - stampedCount) + '個'}</span>
+          </div>
+        </div>
+      `;
+      stampsContainer.insertAdjacentHTML('beforeend', rewardTierHtml);
 
       const stampBoard = document.createElement("div");
       stampBoard.className = "stamp-board";
@@ -1192,203 +1105,89 @@
         const event = masterEvents[eventId];
         const isStamped = userStamps.includes(eventId);
         const stampIcon = event.stampIcon || '🎬';
-
         gridCellsHtml += `
           <div class="stamp-cell ${isStamped ? 'stamped' : ''}">
-            ${isStamped 
-              ? `<div class="stamp-mark">${escapeHtml(stampIcon)}</div>` 
-              : `<div class="stamp-empty">${i + 1}</div>`
-            }
+            ${isStamped ? `<div class="stamp-mark">${escapeHtml(stampIcon)}</div>` : `<div class="stamp-empty">${i + 1}</div>`}
             <div class="stamp-event-name">${escapeHtml(event.name)}</div>
           </div>
         `;
       });
 
-      rewardTargetKeys.forEach(eventId => {
-        const event = masterEvents[eventId];
-        const isStamped = userStamps.includes(eventId);
-        const stampIcon = event.stampIcon || '🎵';
-
-        gridCellsHtml += `
-          <div class="stamp-cell reward-cell ${isStamped ? 'stamped' : ''}">
-            ${isStamped 
-              ? `<div class="stamp-mark">${escapeHtml(stampIcon)}</div>` 
-              : `<div class="stamp-empty">🎁</div>`
-            }
-            <div class="stamp-event-name" style="color:#d35400;">${escapeHtml(event.name)}</div>
-          </div>
-        `;
-      });
-
-      if (seasonEventKeys.length === 0) {
-        gridCellsHtml = `<div style="grid-column: span 2; text-align:center; color:#aaa; padding:20px;">このシーズンのイベントは準備中です</div>`;
-      }
-
       stampBoard.innerHTML = `
-        <div class="stamp-board-title">✨ ${escapeHtml(currentSeason)} スタンプラリー ✨</div>
-        <div class="progress-bar-wrapper">
-          <div class="progress-bar" style="width: ${progressPercent}%;"></div>
-        </div>
-        <div style="text-align:right; font-size:0.75rem; color:#666; margin-bottom:12px;">進捗: ${stampedCountInSeason} / ${stampTargetKeys.length} (${progressPercent}%)</div>
+        <div class="stamp-board-title">✨ ${escapeHtml(currentSeason)} スタンプカード ✨</div>
+        <div class="progress-bar-wrapper"><div class="progress-bar" style="width: ${progressPercent}%;"></div></div>
+        <div style="text-align:right; font-size:0.75rem; color:#666; margin-bottom:12px;">獲得数: ${stampedCount}個</div>
         <div class="stamp-grid">${gridCellsHtml}</div>
       `;
       stampsContainer.appendChild(stampBoard);
 
-      if (seasonEventKeys.length === 0) {
-        stampsContainer.insertAdjacentHTML('beforeend', '<p style="text-align:center; color:#888; margin-top:20px;">このシーズンの詳細イベントはありません。</p>');
-      } else {
-        seasonEventKeys.forEach(eventId => {
-          const event = masterEvents[eventId];
-          const isStamped = userStamps.includes(eventId);
-          const status = event.status || "受付中";
-          const stampIcon = event.stampIcon || '🎬';
+      seasonEventKeys.forEach(eventId => {
+        const event = masterEvents[eventId];
+        const isStamped = userStamps.includes(eventId);
+        const status = event.status || "受付中";
+        const stampIcon = event.stampIcon || '🎬';
+        const stampCard = document.createElement("div");
+        stampCard.className = `card ${status === '受付終了' || status === '今後開催' ? 'disabled-card' : ''}`;
+        
+        let badgeClass = 'not-got', badgeText = '📌 未出席 / スタンプ未獲得';
+        if (isStamped) { badgeClass = 'got'; badgeText = `✅ スタンプ獲得済み ${stampIcon}`; }
+        else if (status === '今後開催') { badgeClass = 'upcoming'; badgeText = '⏳ 今後開催'; }
+        else if (status === '受付終了') { badgeClass = 'ended'; badgeText = '🔒 受付終了'; }
 
-          const stampCard = document.createElement("div");
-          stampCard.className = `card ${status === '受付終了' || status === '今後開催' ? 'disabled-card' : ''}`;
-          
-          let badgeClass = 'not-got';
-          let badgeText = '📌 未出席 / スタンプ未獲得';
-          if (isStamped) {
-            badgeClass = 'got';
-            badgeText = `✅ スタンプ獲得済み ${stampIcon}`;
-          } else if (status === '今後開催') {
-            badgeClass = 'upcoming';
-            badgeText = '⏳ 今後開催';
-          } else if (status === '受付終了') {
-            badgeClass = 'ended';
-            badgeText = '🔒 受付終了';
-          }
+        const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
+        const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
+        const price = Number(event.price) || 0;
 
-          const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
-          const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
-          const price = Number(event.price) || 0;
+        let stampHtml = `
+          <div class="poster-box"><img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター"></div>
+          <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
+          <div style="margin-bottom:6px;"><span class="price-tag">${price > 0 ? `💰 参加費: ${price.toLocaleString()}円` : '🎁 参加費無料'}</span></div>
+          <div class="catchphrase-box">💬 「${catchphrase}」</div>
+          <span class="stamp-badge ${badgeClass}">${badgeText}</span>
+        `;
 
-          let stampHtml = `
-            <div class="poster-box">
-              <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
-            </div>
-            <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
-            <div style="margin-bottom:6px;">
-              ${event.season ? `<span class="price-tag" style="background:#e2e8f0; margin-right:4px;">🗓️ ${escapeHtml(event.season)}</span>` : ''}
-              <span class="price-tag">${price > 0 ? `💰 参加費: ${price.toLocaleString()}円` : '🎁 参加費無料'}</span>
-            </div>
-            <div class="catchphrase-box">💬 「${catchphrase}」</div>
-            <span class="stamp-badge ${badgeClass}">${badgeText}</span>
-          `;
-
-          if (!isStamped && status === '受付中') {
-            stampHtml += `
-              <div class="section-box">
-                <div class="section-title">💡 当日クイズ（正解でスタンプGET）</div>
-                <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>問題:</strong> ${escapeHtml(event.question || 'クイズ未設定')}</p>
-                <input type="text" id="answer-input-${eventId}" placeholder="回答を入力">
-                <button onclick="submitAnswer('${eventId}')" class="secondary">回答してスタンプを押す</button>
-              </div>
-            `;
-          }
-
-          if (isAdminMode && showAdminEdit) {
-            const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
-            let bookingListHtml = eventBookings.length > 0
-              ? eventBookings.map(b => `
-                  <div class="booking-item">
-                    <span><strong>${escapeHtml(b.displayName)}</strong> (${escapeHtml(b.selectedDate)})</span>
-                    <span style="color:#888;">${escapeHtml(b.timestamp)}</span>
-                  </div>
-                `).join('')
-              : '<div style="font-size:0.8rem; color:#888;">まだ申し込みはありません。</div>';
-
-            stampHtml += `
-              <div class="admin-box">
-                <div class="section-title" style="color: #d35400;">⚙ 管理者設定：マスター編集</div>
-                
-                <label>イベントID:</label>
-                <input type="text" value="${escapeHtml(eventId)}" disabled style="background:#e9ecef;">
-
-                <label>イベント名:</label>
-                <input type="text" id="edit-name-${eventId}" value="${escapeHtml(event.name)}">
-
-                <label>該当シーズン (例: 2026秋):</label>
-                <input type="text" id="edit-season-${eventId}" value="${escapeHtml(event.season || '')}">
-
-                <label>参加費 (0で無料):</label>
-                <input type="text" id="edit-price-${eventId}" value="${escapeHtml(event.price || '0')}">
-
-                <label>PayPay通常受け取りリンク:</label>
-                <input type="text" id="edit-paypay-${eventId}" value="${escapeHtml(event.payPayLink || '')}">
-
-                <label>PayPay100円引き受け取りリンク (入力ありで特典対象に):</label>
-                <input type="text" id="edit-paypay-discount-${eventId}" value="${escapeHtml(event.payPayLinkDiscount || '')}">
-
-                <label>スタンプアイコン絵文字:</label>
-                <input type="text" id="edit-icon-${eventId}" value="${escapeHtml(stampIcon)}">
-
-                <label>ポスター画像URL (https://):</label>
-                <input type="text" id="edit-image-${eventId}" value="${escapeHtml(event.imageUrl)}" placeholder="https://...">
-
-                <label>ひとこと魅力:</label>
-                <input type="text" id="edit-catchphrase-${eventId}" value="${escapeHtml(event.catchphrase)}">
-
-                <label>秘密の質問文:</label>
-                <input type="text" id="edit-question-${eventId}" value="${escapeHtml(event.question)}">
-
-                <label>正解コード:</label>
-                <input type="text" id="edit-answer-${eventId}" placeholder="GAS側で保持（変更時のみ入力）">
-
-                <label>候補日程①:</label>
-                <input type="text" id="edit-date1-${eventId}" value="${escapeHtml(event.dates[0] || '')}">
-                <label>候補日程②:</label>
-                <input type="text" id="edit-date2-${eventId}" value="${escapeHtml(event.dates[1] || '')}">
-                <label>候補日程③:</label>
-                <input type="text" id="edit-date3-${eventId}" value="${escapeHtml(event.dates[2] || '')}">
-
-                <label>ステータス:</label>
-                <select id="edit-status-${eventId}">
-                  <option value="受付中" ${status === '受付中' ? 'selected' : ''}>受付中</option>
-                  <option value="今後開催" ${status === '今後開催' ? 'selected' : ''}>今後開催</option>
-                  <option value="受付終了" ${status === '受付終了' ? 'selected' : ''}>受付終了</option>
-                </select>
-
-                <button onclick="saveEventMaster('${eventId}')" class="admin-btn" style="margin-top:10px;">更新内容を保存</button>
-
-                <hr style="border:none; border-top:1px solid #f39c12; margin:16px 0;">
-
-                <div class="section-title" style="color:#d35400;">📋 予約一覧 (${eventBookings.length}件)</div>
-                <div class="booking-list-box">${bookingListHtml}</div>
-              </div>
-            `;
-          }
-
-          if (!selectedReactions[eventId]) selectedReactions[eventId] = new Set();
-          const isReactionDisabled = (status === '今後開催' || status === '受付終了');
-
+        if (!isStamped && status === '受付中') {
           stampHtml += `
-            <div class="reaction-section">
-              <div class="section-title" style="text-align:center;">✨ 心の動きを記録 (※複数選択可)</div>
-              <div class="reaction-subtitle">観賞後の気持ちを選んで送信できます</div>
-              <div class="reaction-chips" id="chips-${eventId}">
-                ${EMOTION_TAGS.map(tag => {
-                  const isSelected = selectedReactions[eventId].has(tag);
-                  return `
-                    <div class="chip ${isSelected ? 'selected' : ''} ${isReactionDisabled ? 'disabled' : ''}" 
-                         onclick="toggleEmotionTag('${eventId}', '${escapeHtml(tag)}',${isReactionDisabled})">
-                      ${escapeHtml(tag)}
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-              <button id="reaction-btn-${eventId}" class="reaction-submit-btn" 
-                      onclick="sendMultipleReactions('${eventId}')" 
-                      ${isReactionDisabled || selectedReactions[eventId].size === 0 ? 'disabled' : ''}>
-                ${isReactionDisabled ? '受付時間外です' : '選択したリアクションを送る'}
-              </button>
+            <div class="section-box">
+              <div class="section-title">💡 当日クイズ（正解でスタンプGET）</div>
+              <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>問題:</strong> ${escapeHtml(event.question || 'クイズ未設定')}</p>
+              <input type="text" id="answer-input-${eventId}" placeholder="回答を入力">
+              <button onclick="submitAnswer('${eventId}')" class="secondary">回答してスタンプを押す</button>
             </div>
           `;
+        }
 
-          stampCard.innerHTML = stampHtml;
-          stampsContainer.appendChild(stampCard);
-        });
-      }
+        if (isAdminMode && showAdminEdit) {
+          const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
+          let bookingListHtml = eventBookings.length > 0 ? eventBookings.map(b => `<div class="booking-item"><span><strong>${escapeHtml(b.displayName)}</strong> (${escapeHtml(b.selectedDate)})</span></div>`).join('') : '<div style="font-size:0.8rem; color:#888;">まだ申し込みはありません。</div>';
+          stampHtml += `
+            <div class="admin-box">
+              <div class="section-title" style="color: #d35400;">⚙ 管理者設定：マスター編集</div>
+              <label>イベント名:</label><input type="text" id="edit-name-${eventId}" value="${escapeHtml(event.name)}">
+              <label>該当シーズン:</label><input type="text" id="edit-season-${eventId}" value="${escapeHtml(event.season || '')}">
+              <label>参加費:</label><input type="text" id="edit-price-${eventId}" value="${escapeHtml(event.price || '0')}">
+              <label>候補日程①:</label><input type="text" id="edit-date1-${eventId}" value="${escapeHtml(event.dates[0] || '')}">
+              <label>候補日程②:</label><input type="text" id="edit-date2-${eventId}" value="${escapeHtml(event.dates[1] || '')}">
+              <label>候補日程③:</label><input type="text" id="edit-date3-${eventId}" value="${escapeHtml(event.dates[2] || '')}">
+              <button onclick="saveEventMaster('${eventId}')" class="admin-btn" style="margin-top:10px;">更新内容を保存</button>
+            </div>
+          `;
+        }
+
+        if (!selectedReactions[eventId]) selectedReactions[eventId] = new Set();
+        const isReactionDisabled = (status === '今後開催' || status === '受付終了');
+        stampHtml += `
+          <div class="reaction-section">
+            <div class="section-title" style="text-align:center;">✨ 心の動きを記録</div>
+            <div class="reaction-chips" id="chips-${eventId}">
+              ${EMOTION_TAGS.map(tag => `<div class="chip ${selectedReactions[eventId].has(tag) ? 'selected' : ''}" onclick="toggleEmotionTag('${eventId}', '${escapeHtml(tag)}',${isReactionDisabled})">${escapeHtml(tag)}</div>`).join('')}
+            </div>
+            <button id="reaction-btn-${eventId}" class="reaction-submit-btn" onclick="sendMultipleReactions('${eventId}')" ${isReactionDisabled || selectedReactions[eventId].size === 0 ? 'disabled' : ''}>送信する</button>
+          </div>
+        `;
+        stampCard.innerHTML = stampHtml;
+        stampsContainer.appendChild(stampCard);
+      });
     }
 
     function renderBookingCard(eventId, container) {
@@ -1397,89 +1196,40 @@
       const formattedDateOnly = formatDateWithDay(bookedDateRaw);
       const status = event.status || "受付中";
       const stampIcon = event.stampIcon || '🎬';
-
-      const isUpcoming = (status === "今後開催");
-      const isEnded = (status === "受付終了");
-      const isAccepting = (status === "受付中");
-      const isDisabled = isUpcoming || isEnded;
-
+      const isDisabled = (status === "今後開催" || status === "受付終了");
       const price = Number(event.price) || 0;
-      const isRewardTarget = !!event.payPayLinkDiscount;
-      const isRewardUnlocked = checkSeasonRewardUnlocked(event.season);
-
-      const eventReactions = allReactions[eventId] || {};
-      const galleryHtml = createGalleryHtml(eventReactions);
-
-      const bookingCard = document.createElement("div");
-      bookingCard.className = `card ${isDisabled ? 'disabled-card' : ''}`;
-
-      let badgeHtml = '';
-      if (isUpcoming) badgeHtml = '<span class="stamp-badge upcoming">⏳ 今後開催</span>';
-      if (isEnded) badgeHtml = '<span class="stamp-badge ended">🔒 受付終了</span>';
-
-      const posterUrl = event.imageUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=600&q=80';
-      const catchphrase = event.catchphrase ? escapeHtml(event.catchphrase) : '魅惑のフィルム体験をお楽しみください。';
+      
+      // クーポン適用判定（スタンプ3個以上でドリンク無料、5個以上で食事割引などの連動用）
+      const stampedCount = getSeasonStampCount(event.season);
+      const isRewardUnlocked = stampedCount >= 3; // 例として3個以上でクーポン有効化
 
       const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
-
       let dateRowsHtml = '';
       if (event.dates && event.dates.length > 0) {
         dateRowsHtml = event.dates.map((dateStr, idx) => {
           const displayDateStr = formatDateWithDay(dateStr);
           const formattedDate = formatDateOnly(dateStr);
-          const members = eventBookings
-            .filter(b => formatDateOnly(b.selectedDate) === formattedDate)
-            .map(b => b.displayName);
-          
+          const members = eventBookings.filter(b => formatDateOnly(b.selectedDate) === formattedDate).map(b => b.displayName);
           const count = members.length;
           const accordionId = `acc-${eventId}-${idx}`;
-
-          let buttonHtml = '';
-          if (isAccepting) {
-            if (count > 0) {
-              buttonHtml = `
-                <button class="member-toggle-btn" onclick="toggleAccordion('${accordionId}')">
-                  👥 参加者 (${count}人) <span id="arrow-${accordionId}">▾</span>
-                </button>
-              `;
-            } else {
-              buttonHtml = `
-                <span class="member-toggle-btn empty">
-                  👤 参加者なし
-                </span>
-              `;
-            }
-          }
-
-          const memberTagsHtml = members.length > 0
-            ? members.map(m => `<span class="member-tag">👤 ${escapeHtml(m)}</span>`).join('')
-            : '';
-
+          const buttonHtml = (status === "受付中" && count > 0) ? `<button class="member-toggle-btn" onclick="toggleAccordion('${accordionId}')">👥 参加者 (${count}人) <span id="arrow-${accordionId}">▾</span></button>` : `<span class="member-toggle-btn empty">👤 参加者なし</span>`;
+          const memberTagsHtml = members.map(m => `<span class="member-tag">👤 ${escapeHtml(m)}</span>`).join('');
           return `
             <div class="date-row-item">
-              <div class="date-row-header">
-                <span>🗓 <strong>${escapeHtml(displayDateStr)}</strong></span>
-                ${buttonHtml}
-              </div>
-              ${(isAccepting && members.length > 0) ? `
-                <div id="${accordionId}" class="members-accordion">
-                  <div class="members-tags">${memberTagsHtml}</div>
-                </div>
-              ` : ''}
+              <div class="date-row-header"><span>🗓 <strong>${escapeHtml(displayDateStr)}</strong></span>${buttonHtml}</div>
+              ${count > 0 ? `<div id="${accordionId}" class="members-accordion"><div class="members-tags">${memberTagsHtml}</div></div>` : ''}
             </div>
           `;
         }).join('');
-      } else {
-        dateRowsHtml = '<div style="font-size:0.85rem; color:#888;">日程未定</div>';
       }
 
       let couponCheckHtml = '';
-      if (isRewardTarget && isRewardUnlocked && !isDisabled) {
+      if (isRewardUnlocked && !isDisabled) {
         couponCheckHtml = `
           <div class="coupon-check-box">
             <input type="checkbox" id="coupon-checkbox-${eventId}">
             <label for="coupon-checkbox-${eventId}" style="margin:0; cursor:pointer;">
-              🎟️ 100円引きクーポンを適用する (${price}円 ➔ ${price - 100}円)
+              🎟️ シルバー特典（ドリンク無料/割引）を適用する
             </label>
           </div>
         `;
@@ -1490,117 +1240,63 @@
         if (bookedDateRaw) {
           const calUrl = buildGoogleCalendarUrl(event.name, bookedDateRaw);
           actionButtonsHtml = `
-            <div style="margin-bottom: 8px;">
-              <button type="button" onclick="openExternalCalendar('${escapeHtml(calUrl)}')" style="background-color: #4285F4; color: white; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                📅 Googleカレンダーに追加
-              </button>
-            </div>
+            <div style="margin-bottom: 8px;"><button type="button" onclick="openExternalCalendar('${escapeHtml(calUrl)}')" style="background-color: #4285F4; color: white;">📅 Googleカレンダーに追加</button></div>
             <div class="btn-group">
               <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')" style="flex:2;">日程を変更</button>
               <button class="btn-danger" onclick="triggerDirectCancel('${eventId}')" style="flex:1;">予約取消</button>
             </div>
           `;
         } else {
-          actionButtonsHtml = `
-            <button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')">この日程で予約する</button>
-          `;
+          actionButtonsHtml = `<button id="booking-btn-${eventId}" onclick="confirmBookingPrompt('${eventId}')">この日程で予約する</button>`;
         }
       } else {
-        actionButtonsHtml = `
-          <button disabled style="background-color: #cbd5e0; color: #718096;">${isUpcoming ? '予約未開始' : '受付終了'}</button>
-        `;
+        actionButtonsHtml = `<button disabled style="background-color: #cbd5e0;">受付終了</button>`;
       }
 
-      let bookingHtml = `
-        <div class="poster-box">
-          <img src="${escapeHtml(posterUrl)}" class="poster-img" alt="ポスター">
-        </div>
+      const bookingCard = document.createElement("div");
+      bookingCard.className = `card ${isDisabled ? 'disabled-card' : ''}`;
+      bookingCard.innerHTML = `
+        <div class="poster-box"><img src="${escapeHtml(event.imageUrl || '')}" class="poster-img" alt="ポスター"></div>
         <div class="card-title">${escapeHtml(event.name)} ${escapeHtml(stampIcon)}</div>
-        <div style="margin-bottom:6px;">
-          ${event.season ? `<span class="price-tag" style="background:#e2e8f0; margin-right:4px;">🗓️ ${escapeHtml(event.season)}</span>` : ''}
-          <span class="price-tag">${price > 0 ? `💰 参加費: ${price.toLocaleString()}円` : '🎁 参加費無料'}</span>
-        </div>
-        <div class="catchphrase-box">💬 「${catchphrase}」</div>
-        ${badgeHtml}
-        
-        ${galleryHtml}
-
-        <div class="section-box" style="${isDisabled ? 'background-color: #eaedf0;' : ''}">
+        <div style="margin-bottom:6px;"><span class="price-tag">${price > 0 ? `💰 参加費: ${price.toLocaleString()}円` : '🎁 参加費無料'}</span></div>
+        <div class="catchphrase-box">💬 「${escapeHtml(event.catchphrase || '')}」</div>
+        <div class="section-box">
           <div class="section-title">📅 参加日程</div>
-          
-          <div class="booking-status">
-            ${bookedDateRaw ? `予約の状況: <strong>${escapeHtml(formattedDateOnly)}</strong>` : '予約の状況: 未予約'}
-          </div>
-
-          <div class="all-dates-box">
-            <div style="font-size:0.8rem; font-weight:bold; color:#555; margin-bottom:6px;">🗓 予約可能日時・参加メンバー状況:</div>
-            ${dateRowsHtml}
-          </div>
-
+          <div class="booking-status">${bookedDateRaw ? `予約状況: <strong>${escapeHtml(formattedDateOnly)}</strong>` : '予約状況: 未予約'}</div>
+          <div class="all-dates-box">${dateRowsHtml}</div>
           <label style="margin-bottom: 6px;">📅 参加日程選択:</label>
           <div class="date-chips-container" id="date-chips-${eventId}">
-            ${
-              event.dates && event.dates.length > 0 
-                ? event.dates.map(d => {
-                    const isSelected = (bookedDateRaw && bookedDateRaw === d) || (selectedDatesState[eventId] === d);
-                    if (isSelected && !selectedDatesState[eventId]) {
-                      selectedDatesState[eventId] = d;
-                    }
-                    const formatted = formatDateWithDay ? formatDateWithDay(d) : d;
-                    return `<button type="button" class="date-chip-btn ${isSelected ? 'selected' : ''}" data-date="${escapeHtml(d)}" onclick="selectDateChip('${eventId}', '${escapeHtml(d)}')">${escapeHtml(formatted)}</button>`;
-                  }).join('')
-                : '<div style="font-size:0.85rem; color:#888;">候補日がありません</div>'
-            }
-            ${
-              bookedDateRaw && !isDisabled ? `
-                <button type="button" class="date-chip-btn cancel-chip ${selectedDatesState[eventId] === 'CANCEL' ? 'selected' : ''}" data-date="CANCEL" onclick="selectDateChip('${eventId}', 'CANCEL')">🚫 予約を取り消す</button>
-              ` : ''
-            }
+            ${event.dates ? event.dates.map(d => {
+              const isSelected = (bookedDateRaw && bookedDateRaw === d) || (selectedDatesState[eventId] === d);
+              if (isSelected && !selectedDatesState[eventId]) selectedDatesState[eventId] = d;
+              return `<button type="button" class="date-chip-btn ${isSelected ? 'selected' : ''}" data-date="${escapeHtml(d)}" onclick="selectDateChip('${eventId}', '${escapeHtml(d)}')">${escapeHtml(formatDateWithDay(d))}</button>`;
+            }).join('') : ''}
+            ${bookedDateRaw && !isDisabled ? `<button type="button" class="date-chip-btn cancel-chip" data-date="CANCEL" onclick="selectDateChip('${eventId}', 'CANCEL')">🚫 取消</button>` : ''}
           </div>
-
           ${couponCheckHtml}
-
           ${actionButtonsHtml}
         </div>
       `;
-
-      bookingCard.innerHTML = bookingHtml;
       container.appendChild(bookingCard);
     }
 
     function toggleAccordion(accId) {
       const elem = document.getElementById(accId);
       const arrow = document.getElementById(`arrow-${accId}`);
-      if (!elem) return;
-
-      const isActive = elem.classList.contains('active');
-      if (isActive) {
-        elem.classList.remove('active');
-        if (arrow) arrow.innerText = '▾';
-      } else {
-        elem.classList.add('active');
-        if (arrow) arrow.innerText = '▴';
+      if (elem) {
+        elem.classList.toggle('active');
+        if (arrow) arrow.innerText = elem.classList.contains('active') ? '▴' : '▾';
       }
     }
 
     function triggerDirectCancel(eventId) {
       pendingBookingData = { eventId, selectedDate: "CANCEL", useCoupon: false };
-      const eventName = masterEvents[eventId].name;
-      const stampIcon = masterEvents[eventId].stampIcon || '🎬';
-
-      const modalTitle = document.getElementById("modal-title");
-      const modalBody = document.getElementById("modal-body-text");
+      document.getElementById("modal-title").innerText = "予約取消の確認";
+      document.getElementById("modal-body-text").innerHTML = "現在の予約を取り消しますか？";
       const confirmBtn = document.getElementById("modal-confirm-btn");
-
-      modalTitle.innerText = "予約取消の確認";
-      modalBody.innerHTML = `
-        <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong>の<br>
-        現在の予約を取り消しますか？
-      `;
       confirmBtn.innerText = "取消実行";
       confirmBtn.className = "btn-danger";
       confirmBtn.onclick = executeCancelBooking;
-
       document.getElementById("confirm-modal").classList.add("active");
     }
 
@@ -1609,35 +1305,16 @@
       const couponCheckbox = document.getElementById(`coupon-checkbox-${eventId}`);
       const useCoupon = couponCheckbox ? couponCheckbox.checked : false;
       
-      if (!selectedDate) {
-        alert("日程のボタンをタップして選択してください。");
-        return;
-      }
+      if (!selectedDate) { alert("日程のボタンをタップして選択してください。"); return; }
+      if (selectedDate === "CANCEL") { triggerDirectCancel(eventId); return; }
 
-      if (selectedDate === "CANCEL") {
-        triggerDirectCancel(eventId);
-        return;
-      }
-
-      const eventName = masterEvents[eventId].name;
-      const stampIcon = masterEvents[eventId].stampIcon || '🎬';
       pendingBookingData = { eventId, selectedDate, useCoupon };
-
-      const modalTitle = document.getElementById("modal-title");
-      const modalBody = document.getElementById("modal-body-text");
+      document.getElementById("modal-title").innerText = "予約内容の確認";
+      document.getElementById("modal-body-text").innerHTML = `日時：<strong>${escapeHtml(selectedDate)}</strong><br>${useCoupon ? '<span style="color:#d35400;">🎟️ 特典を適用</span><br>' : ''}<br>この日程で確定しますか？`;
       const confirmBtn = document.getElementById("modal-confirm-btn");
-
-      modalTitle.innerText = "予約内容の確認";
-      modalBody.innerHTML = `
-        <strong>「${escapeHtml(eventName)} ${escapeHtml(stampIcon)}」</strong><br>
-        日時：<strong>${escapeHtml(selectedDate)}</strong><br>
-        ${useCoupon ? '<span style="color:#d35400; font-weight:bold;">🎟️ 100円引き特典クーポンを適用</span><br>' : ''}
-        <br>この日程で予約を確定しますか？
-      `;
       confirmBtn.innerText = "確定する";
       confirmBtn.className = "";
       confirmBtn.onclick = executeBooking;
-
       document.getElementById("confirm-modal").classList.add("active");
     }
 
@@ -1650,208 +1327,71 @@
       if (!pendingBookingData) return;
       const { eventId, selectedDate, useCoupon } = pendingBookingData;
       closeModal();
-
       showProcessing("予約を確定しています...");
-
-      const payload = {
-        action: "BOOKING",
-        eventId: eventId,
-        detail: selectedDate,
-        useCoupon: useCoupon
-      };
-
-      const res = await sendPost(payload);
+      const res = await sendPost({ action: "BOOKING", eventId, detail: selectedDate, useCoupon });
       hideProcessing();
-
-      if (res.ok) {
-        alert(`「${masterEvents[eventId].name}」を ${selectedDate} で予約完了しました！`);
-        resetToInitialLoading();
-        await loadStatus();
-      } else {
-        alert("予約処理に失敗しました: " + (res.error || ""));
-      }
+      if (res.ok) { alert("予約完了しました！"); resetToInitialLoading(); await loadStatus(); }
+      else { alert("予約失敗: " + (res.error || "")); }
     }
 
     async function executeCancelBooking() {
       if (!pendingBookingData) return;
       const { eventId } = pendingBookingData;
       closeModal();
-
-      showProcessing("予約を取り消しています...");
-
-      const payload = {
-        action: "CANCEL_BOOKING",
-        eventId: eventId
-      };
-
-      const res = await sendPost(payload);
+      showProcessing("取消中...");
+      const res = await sendPost({ action: "CANCEL_BOOKING", eventId });
       hideProcessing();
-
-      if (res.ok) {
-        alert(`「${masterEvents[eventId].name}」の予約の取消が完了しました。`);
-        resetToInitialLoading();
-        await loadStatus();
-      } else {
-        alert("予約取消処理に失敗しました: " + (res.error || ""));
-      }
+      if (res.ok) { alert("予約取消しました。"); resetToInitialLoading(); await loadStatus(); }
+      else { alert("取消失敗"); }
     }
 
     async function submitAnswer(eventId) {
-      const inputElem = document.getElementById(`answer-input-${eventId}`);
-      if (!inputElem) return;
-      const inputVal = inputElem.value.trim();
-
-      if (!inputVal) {
-        alert("回答を入力してください。");
-        return;
-      }
-
-      showProcessing("回答を判定中...");
-
-      const payload = {
-        action: "CHECK_STAMP",
-        eventId: eventId,
-        answer: inputVal
-      };
-
-      const res = await sendPost(payload);
+      const val = document.getElementById(`answer-input-${eventId}`).value.trim();
+      if (!val) { alert("回答を入力してください。"); return; }
+      showProcessing("判定中...");
+      const res = await sendPost({ action: "CHECK_STAMP", eventId, answer: val });
       hideProcessing();
-
-      if (res.ok) {
-        if (res.already) {
-          alert("既にスタンプを獲得済みです。");
-        } else {
-          alert("🎉 正解です！スタンプを獲得しました！");
-        }
-        resetToInitialLoading();
-        await loadStatus();
-      } else {
-        alert("❌ 残念！回答が正しくありません。");
-      }
+      if (res.ok) { alert(res.already ? "既に獲得済みです" : "🎉 正解！スタンプGET！"); resetToInitialLoading(); await loadStatus(); }
+      else { alert("❌ 残念！不正解です。"); }
     }
 
     async function saveEventMaster(eventId) {
       const name = document.getElementById(`edit-name-${eventId}`).value.trim();
       const season = document.getElementById(`edit-season-${eventId}`).value.trim();
       const price = document.getElementById(`edit-price-${eventId}`).value.trim();
-      const payPayLink = document.getElementById(`edit-paypay-${eventId}`).value.trim();
-      const payPayLinkDiscount = document.getElementById(`edit-paypay-discount-${eventId}`).value.trim();
-      const stampIcon = document.getElementById(`edit-icon-${eventId}`).value.trim();
-      const imageUrl = document.getElementById(`edit-image-${eventId}`).value.trim();
-      const catchphrase = document.getElementById(`edit-catchphrase-${eventId}`).value.trim();
-      const question = document.getElementById(`edit-question-${eventId}`).value.trim();
-      const answer = document.getElementById(`edit-answer-${eventId}`).value.trim();
       const date1 = document.getElementById(`edit-date1-${eventId}`).value.trim();
       const date2 = document.getElementById(`edit-date2-${eventId}`).value.trim();
       const date3 = document.getElementById(`edit-date3-${eventId}`).value.trim();
-      const status = document.getElementById(`edit-status-${eventId}`).value;
-
-      if (!name) {
-        alert("イベント名は必須です。");
-        return;
-      }
-
-      showProcessing("マスターデータを更新中...");
       
-      const payload = {
-        action: "UPDATE_EVENT_MASTER",
-        eventId: eventId,
-        name: name,
-        season: season,
-        price: price,
-        payPayLink: payPayLink,
-        payPayLinkDiscount: payPayLinkDiscount,
-        stampIcon: stampIcon || "🎬",
-        imageUrl: imageUrl,
-        catchphrase: catchphrase,
-        question: question,
-        answer: answer,
-        date1: date1,
-        date2: date2,
-        date3: date3,
-        status: status
-      };
-
-      const res = await sendPost(payload);
+      showProcessing("更新中...");
+      const res = await sendPost({ action: "UPDATE_EVENT_MASTER", eventId, name, season, price, date1, date2, date3 });
       hideProcessing();
-
-      if (res.ok) {
-        alert("マスターデータの更新が完了しました！");
-        resetToInitialLoading();
-        await loadStatus();
-      } else {
-        alert("更新権限がないか、エラーが発生しました: " + (res.error || ""));
-      }
+      if (res.ok) { alert("更新完了！"); resetToInitialLoading(); await loadStatus(); }
+      else { alert("更新エラー"); }
     }
 
     async function sendMultipleReactions(eventId) {
       const set = selectedReactions[eventId];
       if (!set || set.size === 0) return;
-
-      const tagsArray = Array.from(set);
-      showProcessing("リアクションを送信中...");
-      
-      const payload = {
-        action: "REACTION",
-        eventId: eventId,
-        reactions: tagsArray
-      };
-      
-      const res = await sendPost(payload);
+      showProcessing("送信中...");
+      const res = await sendPost({ action: "REACTION", eventId, reactions: Array.from(set) });
       hideProcessing();
-      
-      if (res.ok) {
-        alert(`リアクションを送信しました！`);
-        set.clear();
-        
-        const container = document.getElementById(`chips-${eventId}`);
-        const btn = document.getElementById(`reaction-btn-${eventId}`);
-        if (container) container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
-        if (btn) btn.disabled = true;
-
-        resetToInitialLoading();
-        await loadStatus();
-      } else {
-        alert("送信エラーが発生しました。");
-      }
+      if (res.ok) { alert("送信しました！"); set.clear(); resetToInitialLoading(); await loadStatus(); }
+      else { alert("送信エラー"); }
     }
 
     async function sendPost(payload) {
       try {
         payload.idToken = liff.getIDToken();
-        const res = await fetch(GAS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.error === "unauthorized") {
-          alert("ログインの有効期限が切れました。ページを再読み込みします。");
-          liff.logout();
-          location.reload();
-          return { ok: false, error: "unauthorized" };
-        }
-        return data;
+        const res = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) });
+        return await res.json();
       } catch (err) {
-        console.error("通信エラー:", err);
         return { ok: false, error: err.toString() };
       }
     }
 
     function resetToInitialLoading() {
-      const container = document.getElementById("content");
-      if (container) {
-        container.innerHTML = `
-          <div class="loading-container">
-            <div id="status-text" class="status-text">データを再読込中...</div>
-            <div class="progress-bar-wrapper">
-              <div id="progress-bar" class="progress-bar"></div>
-            </div>
-            <div id="progress-percent" style="font-size:0.8rem; color:#888;">10%</div>
-            <div id="error-container"></div>
-          </div>
-        `;
-      }
+      document.getElementById("content").innerHTML = `<div class="loading-container"><div class="status-text">再読込中...</div></div>`;
     }
   </script>
 </body>
