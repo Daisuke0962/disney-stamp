@@ -243,6 +243,52 @@
 
     .card.disabled-card { background-color: #f8f9fa; opacity: 0.85; border-color: #d1d8e0; }
 
+    /* --- 日程選択チップのスタイル --- */
+    .date-chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .date-chip-btn {
+      background-color: #ffffff;
+      border: 1px solid #cbd5e0;
+      color: #2d3748;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: auto;
+      flex: 1;
+      min-width: 120px;
+      text-align: center;
+    }
+    
+    .date-chip-btn:hover {
+      background-color: #edf2f7;
+      border-color: #4299e1;
+    }
+    
+    .date-chip-btn.selected {
+      background-color: var(--primary-color);
+      color: #ffffff;
+      border-color: var(--primary-color);
+      box-shadow: 0 2px 6px rgba(44, 62, 80, 0.25);
+    }
+    
+    .date-chip-btn.cancel-chip {
+      border-color: #feb2b2;
+      color: #e53e3e;
+    }
+    .date-chip-btn.cancel-chip.selected {
+      background-color: #e53e3e;
+      color: #ffffff;
+      border-color: #e53e3e;
+    }
+
     .poster-box {
       width: 100%;
       max-width: 300px;
@@ -310,6 +356,52 @@
       border-radius: 8px;
       padding: 10px 12px;
       margin: 8px 0 14px 0;
+    }
+
+    /* --- 日程選択チップのスタイル --- */
+    .date-chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .date-chip-btn {
+      background-color: #ffffff;
+      border: 1px solid #cbd5e0;
+      color: #2d3748;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: auto;
+      flex: 1;
+      min-width: 120px;
+      text-align: center;
+    }
+    
+    .date-chip-btn:hover {
+      background-color: #edf2f7;
+      border-color: #4299e1;
+    }
+    
+    .date-chip-btn.selected {
+      background-color: var(--primary-color);
+      color: #ffffff;
+      border-color: var(--primary-color);
+      box-shadow: 0 2px 6px rgba(44, 62, 80, 0.25);
+    }
+    
+    .date-chip-btn.cancel-chip {
+      border-color: #feb2b2;
+      color: #e53e3e;
+    }
+    .date-chip-btn.cancel-chip.selected {
+      background-color: #e53e3e;
+      color: #ffffff;
+      border-color: #e53e3e;
     }
 
     .date-row-item {
@@ -634,6 +726,44 @@
     ];
 
     const selectedReactions = {};
+
+    // 選択中の日付を一時保持するオブジェクト
+    const selectedDatesState = {};
+    
+    function selectDateChip(eventId, dateVal) {
+      selectedDatesState[eventId] = dateVal;
+    
+      // 該当イベントのすべてのチップから selected を外し、押されたものだけ付与
+      const container = document.getElementById(`date-chips-${eventId}`);
+      if (container) {
+        container.querySelectorAll('.date-chip-btn').forEach(btn => {
+          if (btn.getAttribute('data-date') === dateVal) {
+            btn.classList.add('selected');
+          } else {
+            btn.classList.remove('selected');
+          }
+        });
+      }
+    }
+
+    // 選択中の日付を一時保持するオブジェクト
+    const selectedDatesState = {};
+    
+    function selectDateChip(eventId, dateVal) {
+      selectedDatesState[eventId] = dateVal;
+    
+      // 該当イベントのすべてのチップから selected を外し、押されたものだけ付与
+      const container = document.getElementById(`date-chips-${eventId}`);
+      if (container) {
+        container.querySelectorAll('.date-chip-btn').forEach(btn => {
+          if (btn.getAttribute('data-date') === dateVal) {
+            btn.classList.add('selected');
+          } else {
+            btn.classList.remove('selected');
+          }
+        });
+      }
+    }
 
     function switchTab(tabName) {
       activeTab = tabName;
@@ -1486,10 +1616,27 @@
             ${dateRowsHtml}
           </div>
 
-          <label for="date-select-${eventId}">参加日程選択:</label>
-          <select id="date-select-${eventId}" ${isDisabled ? 'disabled' : ''} onchange="handleSelectChange('${eventId}')">
-            ${optionsHtml}
-          </select>
+          <label style="margin-bottom: 6px;">📅 参加日程選択:</label>
+          <div class="date-chips-container" id="date-chips-${eventId}">
+            ${
+              event.dates && event.dates.length > 0 
+                ? event.dates.map(d => {
+                    // 既に予約している日、または前回選択状態のものがあれば初期選択にする
+                    const isSelected = (bookedDateRaw && bookedDateRaw === d) || (selectedDatesState[eventId] === d);
+                    if (isSelected && !selectedDatesState[eventId]) {
+                      selectedDatesState[eventId] = d;
+                    }
+                    const formatted = formatDateWithDay ? formatDateWithDay(d) : d;
+                    return `<button type="button" class="date-chip-btn ${isSelected ? 'selected' : ''}" data-date="${escapeHtml(d)}" onclick="selectDateChip('${eventId}', '${escapeHtml(d)}')">${escapeHtml(formatted)}</button>`;
+                  }).join('')
+                : '<div style="font-size:0.85rem; color:#888;">候補日がありません</div>'
+            }
+            ${
+              bookedDateRaw && !isDisabled ? `
+                <button type="button" class="date-chip-btn cancel-chip ${selectedDatesState[eventId] === 'CANCEL' ? 'selected' : ''}" data-date="CANCEL" onclick="selectDateChip('${eventId}', 'CANCEL')">🚫 予約を取り消す</button>
+              ` : ''
+            }
+          </div>
 
           ${couponCheckHtml}
 
@@ -1551,8 +1698,8 @@
     }
 
     function confirmBookingPrompt(eventId) {
-      const selectElem = document.getElementById(`date-select-${eventId}`);
-      const selectedDate = selectElem ? selectElem.value : "";
+      //const selectElem = document.getElementById(`date-select-${eventId}`);
+      const selectedDate = selectedDatesState[eventId] || "";
       const couponCheckbox = document.getElementById(`coupon-checkbox-${eventId}`);
       const useCoupon = couponCheckbox ? couponCheckbox.checked : false;
       
