@@ -358,52 +358,6 @@
       margin: 8px 0 14px 0;
     }
 
-    /* --- 日程選択チップのスタイル --- */
-    .date-chips-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    
-    .date-chip-btn {
-      background-color: #ffffff;
-      border: 1px solid #cbd5e0;
-      color: #2d3748;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      width: auto;
-      flex: 1;
-      min-width: 120px;
-      text-align: center;
-    }
-    
-    .date-chip-btn:hover {
-      background-color: #edf2f7;
-      border-color: #4299e1;
-    }
-    
-    .date-chip-btn.selected {
-      background-color: var(--primary-color);
-      color: #ffffff;
-      border-color: var(--primary-color);
-      box-shadow: 0 2px 6px rgba(44, 62, 80, 0.25);
-    }
-    
-    .date-chip-btn.cancel-chip {
-      border-color: #feb2b2;
-      color: #e53e3e;
-    }
-    .date-chip-btn.cancel-chip.selected {
-      background-color: #e53e3e;
-      color: #ffffff;
-      border-color: #e53e3e;
-    }
-
     .date-row-item {
       padding: 6px 0;
       border-bottom: 1px dashed #edf2f7;
@@ -721,32 +675,13 @@
     let activeTab = "booking"; // 'booking' または 'stamps'
 
     const EMOTION_TAGS = [
-      "🥹 感動", "☕️ ほっこり", "🪄 余韻", "💡 発見",
+      "🥹 感동", "☕️ ほっこり", "🪄 余韻", "💡 発見",
       "🍃 すっきり", "❤️ 愛おしい", "☕️ 穏やか", "✨ 高揚"
     ];
 
     const selectedReactions = {};
 
-    // 選択中の日付を一時保持するオブジェクト
-    const selectedDatesState = {};
-    
-    function selectDateChip(eventId, dateVal) {
-      selectedDatesState[eventId] = dateVal;
-    
-      // 該当イベントのすべてのチップから selected を外し、押されたものだけ付与
-      const container = document.getElementById(`date-chips-${eventId}`);
-      if (container) {
-        container.querySelectorAll('.date-chip-btn').forEach(btn => {
-          if (btn.getAttribute('data-date') === dateVal) {
-            btn.classList.add('selected');
-          } else {
-            btn.classList.remove('selected');
-          }
-        });
-      }
-    }
-
-    // 選択中の日付を一時保持するオブジェクト
+    // 選択中の日付を一時保持するオブジェクト（重複なしの正しい定義）
     const selectedDatesState = {};
     
     function selectDateChip(eventId, dateVal) {
@@ -884,14 +819,13 @@
       `;
     }
 
-    // ★ 曜日付きの表示形式に変換する専用関数（例: 10/29(木) や 10/29(木) 20:00）
+    // ★ 曜日付きの表示形式に変換する専用関数
     function formatDateWithDay(dateStr) {
       if (!dateStr) return "";
       
       const days = ["日", "月", "火", "水", "木", "金", "土"];
       let d = new Date(dateStr);
     
-      // 年が含まれていない "10/29 20:00" などのパターンを考慮
       if (isNaN(d.getTime())) {
         const currentYear = new Date().getFullYear();
         d = new Date(`${currentYear}/${dateStr}`);
@@ -902,14 +836,13 @@
         const day = String(d.getDate()).padStart(2, '0');
         const dayName = days[d.getDay()];
         
-        // 時間（HH:mm）が含まれている場合は時間も後ろにつける
         const timeMatch = String(dateStr).match(/(\d{1,2}:\d{2})/);
         const timeStr = timeMatch ? ` ${timeMatch[1]}` : "";
     
         return `${month}/${day}(${dayName})${timeStr}`;
       }
     
-      return dateStr; // パースできない場合はそのまま返す
+      return dateStr;
     }
 
     function formatDateOnly(dateStr) {
@@ -1060,16 +993,14 @@
         availableSeasons = Array.from(seasonSet);
         if (availableSeasons.length === 0) availableSeasons = ["2026秋"];
 
-        // ★ 日付に基づく「現在（デフォルト）のシーズン」動的判定処理
         if (!currentSeason || !availableSeasons.includes(currentSeason)) {
-          const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+          const today = new Date().toISOString().split('T')[0];
           const seasonEndDates = {};
 
           Object.values(masterEvents).forEach(ev => {
             const season = ev.season ? ev.season.trim() : "";
             if (!season) return;
 
-            // 候補日程①〜③から YYYY-MM-DD 形式の日付文字列を抽出
             const dates = (ev.dates || [])
               .filter(d => d && d.trim() !== "")
               .map(d => {
@@ -1093,7 +1024,6 @@
             }
           });
 
-          // 今日が最終日以前になっているシーズンを時系列順に検索
           let matchedSeason = null;
           for (const season of availableSeasons) {
             const endDate = seasonEndDates[season];
@@ -1153,7 +1083,6 @@
         return;
       }
 
-      // 最上部に「シーズン選択ナビゲーション」を配置
       const seasonIdx = availableSeasons.indexOf(currentSeason);
       const prevSeasonDisabled = seasonIdx <= 0;
       const nextSeasonDisabled = seasonIdx >= availableSeasons.length - 1;
@@ -1181,10 +1110,8 @@
       const bookingContainer = document.getElementById("tab-booking");
       const stampsContainer = document.getElementById("tab-stamps");
 
-      // 現在選択されているシーズンのイベントのみを抽出
       const seasonEventKeys = validEventKeys.filter(id => masterEvents[id].season === currentSeason);
 
-      // --- 予約タブの描画 ---
       const activeOrUpcomingTitle = document.createElement("div");
       activeOrUpcomingTitle.className = "section-header-title";
       activeOrUpcomingTitle.innerHTML = "📅 受付中／今後開催";
@@ -1211,7 +1138,6 @@
         seasonEndedKeys.forEach(eventId => renderBookingCard(eventId, bookingContainer));
       }
 
-      // --- スタンプカードタブの描画 ---
       const stampTargetKeys = seasonEventKeys.filter(id => !masterEvents[id].payPayLinkDiscount);
       const rewardTargetKeys = seasonEventKeys.filter(id => !!masterEvents[id].payPayLinkDiscount);
 
@@ -1374,7 +1300,7 @@
 
             stampHtml += `
               <div class="admin-box">
-                <div class="section-title" style="color: #d35400;">⚙️️ 管理者設定：マスター編集</div>
+                <div class="section-title" style="color: #d35400;">⚙ 管理者設定：マスター編集</div>
                 
                 <label>イベントID:</label>
                 <input type="text" value="${escapeHtml(eventId)}" disabled style="background:#e9ecef;">
@@ -1547,11 +1473,6 @@
         dateRowsHtml = '<div style="font-size:0.85rem; color:#888;">日程未定</div>';
       }
 
-      let optionsHtml = `<option value="">-- 日程を選択してください --</option>`;
-      if (event.dates && event.dates.length > 0) {
-        optionsHtml += event.dates.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-      }
-
       let couponCheckHtml = '';
       if (isRewardTarget && isRewardUnlocked && !isDisabled) {
         couponCheckHtml = `
@@ -1621,7 +1542,6 @@
             ${
               event.dates && event.dates.length > 0 
                 ? event.dates.map(d => {
-                    // 既に予約している日、または前回選択状態のものがあれば初期選択にする
                     const isSelected = (bookedDateRaw && bookedDateRaw === d) || (selectedDatesState[eventId] === d);
                     if (isSelected && !selectedDatesState[eventId]) {
                       selectedDatesState[eventId] = d;
@@ -1663,20 +1583,7 @@
       }
     }
 
-    function handleSelectChange(eventId) {
-      const selectElem = document.getElementById(`date-select-${eventId}`);
-      const btnElem = document.getElementById(`booking-btn-${eventId}`);
-      if (!selectElem || !btnElem) return;
-
-      if (selectElem.value === "CANCEL") {
-        triggerDirectCancel(eventId);
-      }
-    }
-
     function triggerDirectCancel(eventId) {
-      const selectElem = document.getElementById(`date-select-${eventId}`);
-      if (selectElem) selectElem.value = "CANCEL";
-      
       pendingBookingData = { eventId, selectedDate: "CANCEL", useCoupon: false };
       const eventName = masterEvents[eventId].name;
       const stampIcon = masterEvents[eventId].stampIcon || '🎬';
@@ -1698,13 +1605,12 @@
     }
 
     function confirmBookingPrompt(eventId) {
-      //const selectElem = document.getElementById(`date-select-${eventId}`);
       const selectedDate = selectedDatesState[eventId] || "";
       const couponCheckbox = document.getElementById(`coupon-checkbox-${eventId}`);
       const useCoupon = couponCheckbox ? couponCheckbox.checked : false;
       
       if (!selectedDate) {
-        alert("日程を選択してください。");
+        alert("日程のボタンをタップして選択してください。");
         return;
       }
 
