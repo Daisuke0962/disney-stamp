@@ -778,13 +778,12 @@
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
+    // ★ 修正①：予約した正確な日付（dateStr）からカレンダーURLを正しく生成する関数
     function buildGoogleCalendarUrl(eventName, dateStr) {
       if (!dateStr) return "#";
       
       const currentYear = new Date().getFullYear();
-      
-      // 文字列から「月」「日」「時」「分」をより確実に抽出すべく正規表現を調整
-      // 例: "10/29(木) 20:00" や "10/29 20:00" に対応
+      // dateStrから「月」「日」「時」「分」を安全に抽出（例: "10/29(木) 20:00" や "10/29 20:00"）
       const match = String(dateStr).match(/(\d{1,2})[\/\-](\d{1,2})(?:[^\d]+(\d{1,2}):(\d{2}))?/);
       
       let startIso = "";
@@ -793,28 +792,22 @@
       if (match) {
         const month = String(match[1]).padStart(2, '0');
         const day = String(match[2]).padStart(2, '0');
-        // 時間が含まれていない場合はデフォルトで20:00開始にするなどの配慮
         const hour = match[3] ? String(match[3]).padStart(2, '0') : "20";
         const minute = match[4] ? String(match[4]).padStart(2, '0') : "00";
     
         startIso = `${currentYear}${month}${day}T${hour}${minute}00`;
         
-        // 終了時間は開始時間の2時間後に設定
         let endHourNum = parseInt(hour, 10) + 2;
         const endHour = String(endHourNum % 24).padStart(2, '0');
-        // 日付をまたぐ簡易処理（同日計算）
         let endDay = day;
         if (endHourNum >= 24) {
           endDay = String(parseInt(day, 10) + 1).padStart(2, '0');
         }
         endIso = `${currentYear}${month}${endDay}T${endHour}${minute}00`;
       } else {
-        // 万が一パースできなかった場合のフォールバック（今日の日付にする等）
-        const now = new Date();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        startIso = `${currentYear}${m}${d}T200000`;
-        endIso = `${currentYear}${m}${d}T220000`;
+        // 万が一パースできなかった場合の保険（日付が空の場合など）
+        startIso = `${currentYear}0101T200000`;
+        endIso = `${currentYear}0101T220000`;
       }
     
       const title = encodeURIComponent(`🎬 上映会：${eventName}`);
@@ -967,8 +960,42 @@
         availableSeasons = Array.from(seasonSet);
         if (availableSeasons.length === 0) availableSeasons = ["2026秋"];
 
+        // ★ 修正②：初期シーズン判定（次のシーズンを勝手に選ばず、現在または直近の開催シーズンを自動選択）
         if (!currentSeason || !availableSeasons.includes(currentSeason)) {
-          currentSeason = availableSeasons[availableSeasons.length - 1];
+          const today = new Date().toISOString().split('T')[0];
+          let matchedSeason = null;
+
+          for (const season of availableSeasons) {
+            const seasonEvents = Object.values(masterEvents).filter(ev => (ev.season ? ev.season.trim() : "") === season);
+            let hasFutureOrCurrent = false;
+
+            for (const ev of seasonEvents) {
+              const dates = (ev.dates || []).map(d => {
+                const match = String(d).match(/(\d{4})?[-\/]?(\d{1,2})[-\/](\d{1,2})/);
+                if (match) {
+                  const year = match[1] || new Date().getFullYear();
+                  return `${year}-${String(match[2]).padStart(2, '0')}-${String(match[3]).padStart(2, '0')}`;
+                }
+                return "";
+              }).filter(d => d !== "");
+
+              if (dates.some(d => d >= today)) {
+                hasFutureOrCurrent = true;
+                break;
+              }
+            }
+
+            if (hasFutureOrCurrent) {
+              matchedSeason = season;
+              break;
+            }
+          }
+
+          if (matchedSeason) {
+            currentSeason = matchedSeason;
+          } else {
+            currentSeason = availableSeasons[0]; // マッチしない場合は先頭のシーズンをデフォルトにする
+          }
         }
 
         document.getElementById("user-display").innerText = `ログイン: ${currentUser.displayName} 様 ${isAdminMode ? ' (管理者)' : ''}`;
@@ -992,7 +1019,6 @@
       }
     }
 
-    // ★ ステップごとの達成判定関数
     function getSeasonStampCount(seasonName) {
       const seasonEventKeys = Object.keys(masterEvents).filter(id => {
         const ev = masterEvents[id];
@@ -1063,12 +1089,10 @@
 
       // --- スタンプカードタブ ---
       const stampTargetKeys = seasonEventKeys.filter(id => !masterEvents[id].payPayLinkDiscount);
-      const rewardTargetKeys = seasonEventKeys.filter(id => !!masterEvents[id].payPayLinkDiscount);
       const stampedCount = getSeasonStampCount(currentSeason);
       const totalCount = stampTargetKeys.length || 1;
       const progressPercent = Math.min(100, Math.floor((stampedCount / totalCount) * 100));
 
-      // ステップ報酬の達成状況判定
       const has1 = stampedCount >= 1;
       const has3 = stampedCount >= 3;
       const has5 = stampedCount >= 5;
@@ -1093,7 +1117,6 @@
       `;
       stampsContainer.appendChild(guideBox);
 
-      // ステップ報酬アンロック状況カード
       const rewardTierHtml = `
         <div class="reward-tier-box">
           <div class="reward-tier-title">🎁 ステップ報酬の達成状況（現在 ${stampedCount}個獲得）</div>
@@ -1175,7 +1198,6 @@
 
         if (isAdminMode && showAdminEdit) {
           const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
-          let bookingListHtml = eventBookings.length > 0 ? eventBookings.map(b => `<div class="booking-item"><span><strong>${escapeHtml(b.displayName)}</strong> (${escapeHtml(b.selectedDate)})</span></div>`).join('') : '<div style="font-size:0.8rem; color:#888;">まだ申し込みはありません。</div>';
           stampHtml += `
             <div class="admin-box">
               <div class="section-title" style="color: #d35400;">⚙ 管理者設定：マスター編集</div>
@@ -1215,9 +1237,8 @@
       const isDisabled = (status === "今後開催" || status === "受付終了");
       const price = Number(event.price) || 0;
       
-      // クーポン適用判定（スタンプ3個以上でドリンク無料、5個以上で食事割引などの連動用）
       const stampedCount = getSeasonStampCount(event.season);
-      const isRewardUnlocked = stampedCount >= 3; // 例として3個以上でクーポン有効化
+      const isRewardUnlocked = stampedCount >= 3;
 
       const eventBookings = allBookings.filter(b => String(b.eventId) === String(eventId));
       let dateRowsHtml = '';
