@@ -1338,7 +1338,7 @@
     function renderBookingCard(eventId, container) {
       const event = masterEvents[eventId];
       const bookedDateRaw = userBookings[eventId];
-      const formattedDateOnly = formatDateOnly(bookedDateRaw);
+      const formattedDateOnly = formatDateWithDay(bookedDateRaw);
       const status = event.status || "受付中";
       const stampIcon = event.stampIcon || '🎬';
 
@@ -1369,6 +1369,7 @@
       let dateRowsHtml = '';
       if (event.dates && event.dates.length > 0) {
         dateRowsHtml = event.dates.map((dateStr, idx) => {
+          const displayDateStr = formatDateWithDay(dateStr);
           const formattedDate = formatDateOnly(dateStr);
           const members = eventBookings
             .filter(b => formatDateOnly(b.selectedDate) === formattedDate)
@@ -1401,7 +1402,7 @@
           return `
             <div class="date-row-item">
               <div class="date-row-header">
-                <span>🗓 <strong>${escapeHtml(dateStr)}</strong></span>
+                <span>🗓 <strong>${escapeHtml(displayDateStr)}</strong></span>
                 ${buttonHtml}
               </div>
               ${(isAccepting && members.length > 0) ? `
